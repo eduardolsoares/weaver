@@ -4,7 +4,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 
 import weaver.shared.generated.resources.Res
-import weaver.shared.generated.resources.compose_multiplatform
 
 enum class Rota {
     LOGIN,
