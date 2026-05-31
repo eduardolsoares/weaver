@@ -4,24 +4,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.tooling.preview.Preview
 
 import weaver.shared.generated.resources.Res
-import weaver.shared.generated.resources.compose_multiplatform
-
 enum class Rota {
     LOGIN,
     HOME
 }
 
 @Composable
-@Preview
-fun App() {
+fun App(
+    onGoogleLoginRequest: () -> Unit,
+    onLoginConfirmado: (() -> Unit) -> Unit
+) {
     var telaAtual by remember { mutableStateOf(Rota.LOGIN) }
 
-    when (telaAtual){
+    onLoginConfirmado {
+        telaAtual = Rota.HOME
+    }
+
+    when (telaAtual) {
         Rota.LOGIN -> {
             LoginScreen(
                 onLoginSuccess = {
                     telaAtual = Rota.HOME
-                }
+                },
+                onGoogleLoginClick = onGoogleLoginRequest
             )
         }
         Rota.HOME -> {

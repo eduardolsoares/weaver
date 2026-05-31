@@ -29,6 +29,10 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation("io.ktor:ktor-server-core:3.5.0")
+            implementation("io.ktor:ktor-server-netty:3.5.0")
+            implementation("io.ktor:ktor-server-host-common:3.5.0")
+            implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
