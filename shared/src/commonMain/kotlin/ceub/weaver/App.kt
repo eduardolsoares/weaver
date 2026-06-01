@@ -1,9 +1,6 @@
 package ceub.weaver
 
 import androidx.compose.runtime.*
-import androidx.compose.ui.tooling.preview.Preview
-
-import weaver.shared.generated.resources.Res
 
 enum class Rota {
     LOGIN,
@@ -34,9 +31,4 @@ fun App(
             HomeScreen()
         }
     }
-}
-
-@Composable
-fun HomeScreen() {
-    androidx.compose.material3.Text("BEM VINDO AO WEAVER STUDIO.")
 }
