@@ -11,14 +11,9 @@ enum class Rota {
 
 @Composable
 fun App(
-    onGoogleLoginRequest: () -> Unit,
-    onLoginConfirmado: (() -> Unit) -> Unit
+    onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit
 ) {
     var telaAtual by remember { mutableStateOf(Rota.LOGIN) }
-
-    onLoginConfirmado {
-        telaAtual = Rota.HOME
-    }
 
     when (telaAtual) {
         Rota.LOGIN -> {
@@ -26,7 +21,12 @@ fun App(
                 onLoginSuccess = {
                     telaAtual = Rota.HOME
                 },
-                onGoogleLoginClick = onGoogleLoginRequest
+                onGoogleLoginClick = {
+                    onGoogleLoginRequest(
+                        { telaAtual = Rota.HOME },
+                        { println("Login failed: ${it.message}") }
+                    )
+                }
             )
         }
         Rota.HOME -> {
