@@ -25,7 +25,7 @@ val CorAzulBotao = Color(0xFF0080FF)
 val CorBordaInput = Color(0xFF333333)
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
     val lexendFont = getLexendFontFamily()
     Row(
         modifier = Modifier
@@ -71,13 +71,14 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             )
 
             SocialButton(
-                "Continue with Google",
-                icon = painterResource(Res.drawable.icn_google)
-                )
-            Spacer(modifier = Modifier.height(15.dp))
+                text = "Continue with Google",
+                icon = painterResource(Res.drawable.icn_google),
+                onClick = onGoogleLoginClick,
+            )
             SocialButton(
                 "Continue with GitHub",
                 icon = painterResource(Res.drawable.icn_github),
+                onGoogleLoginClick
             )
 
             HorizontalDivider(
@@ -125,9 +126,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
 }
 
 @Composable
-fun SocialButton(text: String, icon: Painter) {
+fun SocialButton(text: String, icon: Painter, onClick: () -> Unit) {
     OutlinedButton(
-        onClick = { },
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(55.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
