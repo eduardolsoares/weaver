@@ -3,20 +3,24 @@ package ceub.weaver
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.martmists.compose.grapheditor.compose.GraphState
 import com.martmists.compose.grapheditor.compose.LocalNodeGraphStyle
 import com.martmists.compose.grapheditor.compose.NodeGraph
+import com.martmists.compose.grapheditor.compose.NodeGraphStyle
 import com.martmists.compose.grapheditor.data.Graph
 import com.martmists.compose.grapheditor.data.NodeDefinition
 import com.martmists.compose.grapheditor.data.PortDefinition
@@ -81,6 +86,7 @@ actual fun HomeScreen() {
 
     val state = remember { GraphState(graph) }
     var isDarkTheme by remember { mutableStateOf(true) }
+    var isPanActive by remember { mutableStateOf(false) }
     val style = remember(isDarkTheme) { databaseTableStyle(isDarkTheme) }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -90,6 +96,36 @@ actual fun HomeScreen() {
                 modifier = Modifier
                     .requiredWidth(maxWidth)
                     .requiredHeight(maxHeight)
+            )
+        }
+
+        if (isPanActive) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            state.panOffset += dragAmount
+                        }
+                    }
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(end = 12.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(style.colors.sidebar.copy(alpha = 0.95f))
+                .border(1.dp, style.colors.sidebarBorder, RoundedCornerShape(10.dp))
+                .padding(4.dp),
+        ) {
+            ToolbarButton(
+                icon = "\u270B",
+                isActive = isPanActive,
+                onClick = { isPanActive = !isPanActive },
+                style = style,
             )
         }
 
@@ -109,5 +145,32 @@ actual fun HomeScreen() {
                 style = TextStyle(fontSize = 16.sp),
             )
         }
+    }
+}
+
+@Composable
+private fun ToolbarButton(
+    icon: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    style: NodeGraphStyle,
+) {
+    val activeModifier = if (isActive) {
+        Modifier
+            .background(style.colors.selectionHighlight.copy(alpha = 0.15f))
+            .border(1.dp, style.colors.selectionHighlight, RoundedCornerShape(8.dp))
+    } else {
+        Modifier
+    }
+
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .then(activeModifier)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(icon, style = TextStyle(fontSize = 18.sp))
     }
 }
