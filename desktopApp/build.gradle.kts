@@ -13,6 +13,11 @@ dependencies {
     implementation(libs.kotlinx.coroutinesSwing)
 
     implementation(libs.compose.uiToolingPreview)
+
+    implementation("io.ktor:ktor-server-core:3.5.0")
+    implementation("io.ktor:ktor-server-netty:3.5.0")
+    implementation("io.ktor:ktor-server-host-common:3.5.0")
+    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 }
 
 compose.desktop {
