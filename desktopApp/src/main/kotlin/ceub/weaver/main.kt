@@ -22,7 +22,8 @@ import io.github.cdimascio.dotenv.dotenv
 fun main() = application {
     var token by remember { mutableStateOf<String?>(null) }
 
-    val env = remember { dotenv { directory = "/home/kayla/projects/public/weaver/desktopApp"; ignoreIfMissing = true } }
+    val env =
+        remember { dotenv { directory = "/home/kayla/projects/public/weaver/desktopApp"; ignoreIfMissing = true } }
     val clientSecret = remember { env["GOOGLE_CLIENT_SECRET"] }
 
     if (token == null) {
@@ -40,7 +41,7 @@ fun main() = application {
         Window(
             onCloseRequest = ::exitApplication,
             title = "weaver",
-            state = WindowState(size = DpSize(580.dp, 640.dp)),
+            state = WindowState(size = DpSize(800.dp, 960.dp)),
         ) {
             Box(
                 modifier = Modifier.fillMaxSize().background(Color(0xFF0A0C0F)),
