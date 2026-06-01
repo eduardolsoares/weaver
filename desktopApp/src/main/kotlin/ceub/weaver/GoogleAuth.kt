@@ -20,7 +20,6 @@ const val GOOGLE_REDIRECT_URI = "http://localhost:8082/callback"
 object GoogleAuth {
     fun iniciarLogin(
         useCase: GoogleLoginUseCase,
-        scope: CoroutineScope,
         onSuccess: () -> Unit,
         onError: (Throwable) -> Unit
     ) {
@@ -69,7 +68,7 @@ object GoogleAuth {
                                                     "</body></html>",
                                             io.ktor.http.ContentType.Text.Html
                                         )
-                                        scope.launch { onSuccess() }
+                                        onSuccess()
                                     }
                                     .onFailure { error ->
                                         call.respondText(
@@ -80,7 +79,7 @@ object GoogleAuth {
                                                     "</body></html>",
                                             io.ktor.http.ContentType.Text.Html
                                         )
-                                        scope.launch { onError(error) }
+                                        onError(error)
                                     }
                             } else {
                                 call.respondText(
@@ -90,7 +89,7 @@ object GoogleAuth {
                                             "</body></html>",
                                     io.ktor.http.ContentType.Text.Html
                                 )
-                                scope.launch { onError(Exception("Authorization code not found in callback")) }
+                                onError(Exception("Authorization code not found in callback"))
                             }
                             server.stop(gracePeriodMillis = 1000, timeoutMillis = 3000)
                         }

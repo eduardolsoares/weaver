@@ -5,7 +5,6 @@ import ceub.weaver.data.remote.GoogleOAuthClient
 import ceub.weaver.data.repository.GoogleAuthRepositoryImpl
 import ceub.weaver.domain.usecase.GoogleLoginUseCase
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import io.github.cdimascio.dotenv.Dotenv
@@ -15,8 +14,6 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "weaver",
     ) {
-        val composeScope = rememberCoroutineScope()
-
         val clientSecret = remember {
             try {
                 Dotenv.load()["GOOGLE_CLIENT_SECRET"]
@@ -34,7 +31,6 @@ fun main() = application {
             onGoogleLoginRequest = { onSuccess, onError ->
                 GoogleAuth.iniciarLogin(
                     useCase = loginUseCase,
-                    scope = composeScope,
                     onSuccess = onSuccess,
                     onError = onError
                 )
