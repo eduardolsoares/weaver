@@ -13,15 +13,34 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
+import ceub.weaver.data.local.TokenStorage
+import ceub.weaver.data.remote.GoogleOAuthClient
+import ceub.weaver.data.repository.GoogleAuthRepositoryImpl
+import ceub.weaver.domain.usecase.GoogleLoginUseCase
+import io.github.cdimascio.dotenv.dotenv
 
 fun main() = application {
     var token by remember { mutableStateOf<String?>(null) }
 
+    val env = remember { dotenv { directory = "/home/kayla/projects/public/weaver/desktopApp"; ignoreIfMissing = true } }
+    val clientSecret = remember { env["GOOGLE_CLIENT_SECRET"] }
+
     if (token == null) {
+        val oauthClient = remember {
+            GoogleOAuthClient(
+                clientId = GOOGLE_CLIENT_ID,
+                redirectUri = GOOGLE_REDIRECT_URI,
+                clientSecret = clientSecret,
+            )
+        }
+        val storage = remember { TokenStorage() }
+        val repository = remember { GoogleAuthRepositoryImpl(storage, oauthClient) }
+        val loginUseCase = remember { GoogleLoginUseCase(repository) }
+
         Window(
             onCloseRequest = ::exitApplication,
             title = "weaver",
-            state = WindowState(size = DpSize(800.dp, 800.dp)),
+            state = WindowState(size = DpSize(580.dp, 640.dp)),
         ) {
             Box(
                 modifier = Modifier.fillMaxSize().background(Color(0xFF0A0C0F)),
@@ -32,10 +51,11 @@ fun main() = application {
                         token = "skipped"
                     },
                     onGoogleLoginClick = {
-                        GoogleAuth.iniciarLogin { t ->
-                            println("Token recebido no Desktop: $t")
-                            token = t
-                        }
+                        GoogleAuth.iniciarLogin(
+                            useCase = loginUseCase,
+                            onSuccess = { token = "skipped" },
+                            onError = { println("Login error: ${it.message}") }
+                        )
                     }
                 )
             }

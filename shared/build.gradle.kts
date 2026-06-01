@@ -36,14 +36,11 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-<<<<<<< HEAD
-=======
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-server-core:3.5.0")
             implementation("io.ktor:ktor-server-netty:3.5.0")
             implementation("io.ktor:ktor-server-host-common:3.5.0")
->>>>>>> b7c647e (fix: separated the sizes of the login screen and the home screen.)
             implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
             implementation("com.martmists.grapheditor:compose-node-editor:1.0.1")
         }
