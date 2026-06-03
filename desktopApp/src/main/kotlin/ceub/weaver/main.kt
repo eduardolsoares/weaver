@@ -18,13 +18,12 @@ import ceub.weaver.data.remote.GoogleOAuthClient
 import ceub.weaver.data.repository.GoogleAuthRepositoryImpl
 import ceub.weaver.domain.usecase.GoogleLoginUseCase
 import io.github.cdimascio.dotenv.dotenv
-
 fun main() = application {
     var token by remember { mutableStateOf<String?>(null) }
-
-    val env = remember { dotenv { directory = "/home/kayla/projects/public/weaver/desktopApp"; ignoreIfMissing = true } }
-    val clientSecret = remember { env["GOOGLE_CLIENT_SECRET"] }
-
+    val env = remember { 
+        dotenv()
+     }
+    val clientSecret = env["GOOGLE_CLIENT_SECRET"]
     if (token == null) {
         val oauthClient = remember {
             GoogleOAuthClient(
