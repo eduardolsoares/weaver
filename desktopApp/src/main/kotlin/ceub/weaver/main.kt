@@ -39,7 +39,7 @@ fun main() = application {
         Window(
             onCloseRequest = ::exitApplication,
             title = "weaver",
-            state = WindowState(size = DpSize(580.dp, 640.dp)),
+            state = WindowState(size = DpSize(800.dp, 960.dp)),
         ) {
             Box(
                 modifier = Modifier.fillMaxSize().background(Color(0xFF0A0C0F)),
