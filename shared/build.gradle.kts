@@ -12,6 +12,8 @@ kotlin {
             compileTaskProvider.configure {
                 compilerOptions {
                     freeCompilerArgs.add("-Xskip-prerelease-check")
+                    freeCompilerArgs.add("-Xexplicit-backing-fields")
+                    freeCompilerArgs.add("-Xcontext-parameters")
                 }
             }
         }
