@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -28,6 +29,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -332,11 +335,36 @@ private fun BoxScope.TableNodeAttributePanel(
                     var expanded by remember { mutableStateOf(false) }
                     val interactionSource = remember { MutableInteractionSource() }
                     val isHovered by interactionSource.collectIsHoveredAsState()
+                    var dragOffset by remember { mutableStateOf(0f) }
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .hoverable(interactionSource)
+                            .pointerInput(Unit) {
+                                detectDragGesturesAfterLongPress(
+                                    onDrag = { change, amount ->
+                                        change.consume()
+                                        dragOffset += amount.y
+                                        val threshold = with(density) { 25.dp.toPx() }
+                                        val idx = columns.indexOf(col)
+                                        if (idx < 0) return@detectDragGesturesAfterLongPress
+                                        if (dragOffset > threshold && idx > 0) {
+                                            val tmp = columns[idx]
+                                            columns[idx] = columns[idx - 1]
+                                            columns[idx - 1] = tmp
+                                            dragOffset = 0f
+                                        } else if (dragOffset < -threshold && idx < columns.lastIndex) {
+                                            val tmp = columns[idx]
+                                            columns[idx] = columns[idx + 1]
+                                            columns[idx + 1] = tmp
+                                            dragOffset = 0f
+                                        }
+                                    },
+                                    onDragEnd = { dragOffset = 0f },
+                                    onDragCancel = { dragOffset = 0f },
+                                )
+                            }
                             .padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
@@ -361,16 +389,83 @@ private fun BoxScope.TableNodeAttributePanel(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false },
                             ) {
-                                databaseTypes[selectedDatabase]?.forEach { type ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(type, style = columnTextStyle)
+                                var searchQuery by remember { mutableStateOf("") }
+                                val filteredTypes = remember(searchQuery) {
+                                    databaseTypes[selectedDatabase]!!.filter {
+                                        it.contains(searchQuery, ignoreCase = true)
+                                    }
+                                }
+                                var windowStart by remember { mutableStateOf(0) }
+
+                                LaunchedEffect(filteredTypes.size) {
+                                    val maxStart = (filteredTypes.size - 3).coerceAtLeast(0)
+                                    if (windowStart > maxStart) windowStart = maxStart
+                                }
+
+                                TextField(
+                                    value = searchQuery,
+                                    onValueChange = {
+                                        searchQuery = it
+                                        windowStart = 0
+                                    },
+                                    placeholder = {
+                                        Text("search...", style = columnTextStyle)
+                                    },
+                                    textStyle = columnTextStyle,
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                                )
+
+                                val visibleTypes = filteredTypes.drop(windowStart).take(3)
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(84.dp)
+                                        .pointerInput(filteredTypes.size) {
+                                            awaitPointerEventScope {
+                                                while (true) {
+                                                    val event = awaitPointerEvent()
+                                                    if (event.type == PointerEventType.Scroll) {
+                                                        val deltaY = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                                        val maxStart = (filteredTypes.size - 3).coerceAtLeast(0)
+                                                        if (deltaY > 0f && windowStart < maxStart) {
+                                                            windowStart++
+                                                        } else if (deltaY < 0f && windowStart > 0) {
+                                                            windowStart--
+                                                        }
+                                                        event.changes.forEach { it.consume() }
+                                                    }
+                                                }
+                                            }
                                         },
-                                        onClick = {
-                                            columns[i] = col.copy(type = type)
-                                            expanded = false
-                                        },
-                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(vertical = 2.dp),
+                                    ) {
+                                        visibleTypes.forEach { type ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .weight(1f)
+                                                    .clickable {
+                                                        columns[i] = col.copy(type = type)
+                                                        expanded = false
+                                                    }
+                                                    .padding(horizontal = 12.dp),
+                                                contentAlignment = Alignment.CenterStart,
+                                            ) {
+                                                Text(type, style = columnTextStyle)
+                                            }
+                                            if (type != visibleTypes.last()) {
+                                                Spacer(Modifier.height(2.dp))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
