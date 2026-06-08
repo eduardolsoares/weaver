@@ -227,32 +227,53 @@ actual fun HomeScreen() {
             )
         }
 
-        Row(
+        var dbDropdownExpanded by remember { mutableStateOf(false) }
+        Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 12.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(style.colors.sidebar.copy(alpha = 0.9f))
-                .border(1.dp, style.colors.sidebarBorder, RoundedCornerShape(8.dp)),
+                .padding(top = 12.dp),
         ) {
-            databaseNames.forEachIndexed { i, name ->
-                val isSelected = name == selectedDatabase
-                val bg = if (isSelected) style.colors.selectionHighlight.copy(alpha = 0.25f)
-                         else Color.Transparent
-                Box(
-                    modifier = Modifier
-                        .clickable { selectedDatabase = name }
-                        .background(bg, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        name,
-                        style = TextStyle(
-                            fontSize = 12.sp,
-                            color = if (isSelected) style.colors.selectionHighlight
-                                    else style.colors.portName,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        ),
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(style.colors.sidebar.copy(alpha = 0.9f))
+                    .border(1.dp, style.colors.sidebarBorder, RoundedCornerShape(8.dp))
+                    .clickable { dbDropdownExpanded = true }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Text(
+                    selectedDatabase,
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        color = style.colors.selectionHighlight,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                )
+            }
+            DropdownMenu(
+                expanded = dbDropdownExpanded,
+                onDismissRequest = { dbDropdownExpanded = false },
+            ) {
+                databaseNames.forEach { name ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                name,
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = if (name == selectedDatabase)
+                                            style.colors.selectionHighlight
+                                            else style.colors.portName,
+                                    fontWeight = if (name == selectedDatabase)
+                                            FontWeight.Bold
+                                            else FontWeight.Normal,
+                                ),
+                            )
+                        },
+                        onClick = {
+                            selectedDatabase = name
+                            dbDropdownExpanded = false
+                        },
                     )
                 }
             }
