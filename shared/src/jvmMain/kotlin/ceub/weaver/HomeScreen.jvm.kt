@@ -28,8 +28,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -385,84 +387,102 @@ private fun BoxScope.TableNodeAttributePanel(
                                     .background(style.colors.nodeBorder.copy(alpha = 0.15f))
                                     .padding(horizontal = 6.dp, vertical = 1.dp),
                             )
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
+                            MaterialTheme(
+                                colorScheme = MaterialTheme.colorScheme.copy(
+                                    surface = style.colors.nodeDefault,
+                                    onSurface = style.colors.portName,
+                                ),
                             ) {
-                                var searchQuery by remember { mutableStateOf("") }
-                                val filteredTypes = remember(searchQuery) {
-                                    databaseTypes[selectedDatabase]!!.filter {
-                                        it.contains(searchQuery, ignoreCase = true)
-                                    }
-                                }
-                                var windowStart by remember { mutableStateOf(0) }
-
-                                LaunchedEffect(filteredTypes.size) {
-                                    val maxStart = (filteredTypes.size - 3).coerceAtLeast(0)
-                                    if (windowStart > maxStart) windowStart = maxStart
-                                }
-
-                                TextField(
-                                    value = searchQuery,
-                                    onValueChange = {
-                                        searchQuery = it
-                                        windowStart = 0
-                                    },
-                                    placeholder = {
-                                        Text("search...", style = columnTextStyle)
-                                    },
-                                    textStyle = columnTextStyle,
-                                    singleLine = true,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                                )
-
-                                val visibleTypes = filteredTypes.drop(windowStart).take(3)
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(84.dp)
-                                        .pointerInput(filteredTypes.size) {
-                                            awaitPointerEventScope {
-                                                while (true) {
-                                                    val event = awaitPointerEvent()
-                                                    if (event.type == PointerEventType.Scroll) {
-                                                        val deltaY = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
-                                                        val maxStart = (filteredTypes.size - 3).coerceAtLeast(0)
-                                                        if (deltaY > 0f && windowStart < maxStart) {
-                                                            windowStart++
-                                                        } else if (deltaY < 0f && windowStart > 0) {
-                                                            windowStart--
-                                                        }
-                                                        event.changes.forEach { it.consume() }
-                                                    }
-                                                }
-                                            }
-                                        },
+                                DropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false },
                                 ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(vertical = 2.dp),
-                                    ) {
-                                        visibleTypes.forEach { type ->
+                                    var searchQuery by remember { mutableStateOf("") }
+                                    val filteredTypes = remember(searchQuery) {
+                                        databaseTypes[selectedDatabase]!!.filter {
+                                            it.contains(searchQuery, ignoreCase = true)
+                                        }
+                                    }
+                                    var windowStart by remember { mutableStateOf(0) }
+
+                                    LaunchedEffect(filteredTypes.size) {
+                                        val maxStart = (filteredTypes.size - 3).coerceAtLeast(0)
+                                        if (windowStart > maxStart) windowStart = maxStart
+                                    }
+
+                                    Box(Modifier.fillMaxWidth().background(style.colors.nodeDefault)) {
+                                        Column(Modifier.fillMaxWidth()) {
+                                            TextField(
+                                                value = searchQuery,
+                                                onValueChange = {
+                                                    searchQuery = it
+                                                    windowStart = 0
+                                                },
+                                                placeholder = {
+                                                    Text("search...", style = columnTextStyle)
+                                                },
+                                                textStyle = columnTextStyle.copy(color = style.colors.portName),
+                                                singleLine = true,
+                                                colors = TextFieldDefaults.colors(
+                                                    focusedContainerColor = Color.Transparent,
+                                                    unfocusedContainerColor = Color.Transparent,
+                                                    focusedIndicatorColor = style.colors.selectionHighlight.copy(alpha = 0.5f),
+                                                    unfocusedIndicatorColor = style.colors.nodeBorder.copy(alpha = 0.3f),
+                                                    focusedTextColor = style.colors.portName,
+                                                    unfocusedTextColor = style.colors.portName,
+                                                    cursorColor = style.colors.selectionHighlight,
+                                                ),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                            )
+                                            val visibleTypes = filteredTypes.drop(windowStart).take(3)
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .weight(1f)
-                                                    .clickable {
-                                                        columns[i] = col.copy(type = type)
-                                                        expanded = false
-                                                    }
-                                                    .padding(horizontal = 12.dp),
-                                                contentAlignment = Alignment.CenterStart,
+                                                    .height(84.dp)
+                                                    .pointerInput(filteredTypes.size) {
+                                                        awaitPointerEventScope {
+                                                            while (true) {
+                                                                val event = awaitPointerEvent()
+                                                                if (event.type == PointerEventType.Scroll) {
+                                                                    val deltaY = event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                                                    val maxStart = (filteredTypes.size - 3).coerceAtLeast(0)
+                                                                    if (deltaY > 0f && windowStart < maxStart) {
+                                                                        windowStart++
+                                                                    } else if (deltaY < 0f && windowStart > 0) {
+                                                                        windowStart--
+                                                                    }
+                                                                    event.changes.forEach { it.consume() }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
                                             ) {
-                                                Text(type, style = columnTextStyle)
-                                            }
-                                            if (type != visibleTypes.last()) {
-                                                Spacer(Modifier.height(2.dp))
+                                                Column(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .padding(vertical = 2.dp),
+                                                ) {
+                                                    visibleTypes.forEach { type ->
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .weight(1f)
+                                                                .clickable {
+                                                                    columns[i] = col.copy(type = type)
+                                                                    expanded = false
+                                                                }
+                                                                .padding(horizontal = 12.dp),
+                                                            contentAlignment = Alignment.CenterStart,
+                                                        ) {
+                                                            Text(type, style = columnTextStyle)
+                                                        }
+                                                        if (type != visibleTypes.last()) {
+                                                            Spacer(Modifier.height(2.dp))
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
