@@ -24,6 +24,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.awt.KeyboardFocusManager
+import java.awt.event.KeyEvent as AWTKeyEvent
+import java.awt.KeyEventDispatcher
 
 import com.martmists.compose.grapheditor.compose.GraphState
 import com.martmists.compose.grapheditor.compose.LocalNodeGraphStyle
@@ -87,7 +90,23 @@ actual fun HomeScreen() {
     val state = remember { GraphState(graph) }
     var isDarkTheme by remember { mutableStateOf(true) }
     var isPanActive by remember { mutableStateOf(false) }
+    var isCtrlPressed by remember { mutableStateOf(false) }
     val style = remember(isDarkTheme) { databaseTableStyle(isDarkTheme) }
+
+    DisposableEffect(Unit) {
+        val dispatcher = KeyEventDispatcher { event ->
+            if (event.keyCode == AWTKeyEvent.VK_CONTROL) {
+                isCtrlPressed = event.id == AWTKeyEvent.KEY_PRESSED
+            }
+            false
+        }
+        KeyboardFocusManager.getCurrentKeyboardFocusManager()
+            .addKeyEventDispatcher(dispatcher)
+        onDispose {
+            KeyboardFocusManager.getCurrentKeyboardFocusManager()
+                .removeKeyEventDispatcher(dispatcher)
+        }
+    }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         CompositionLocalProvider(LocalNodeGraphStyle provides style) {
@@ -99,7 +118,7 @@ actual fun HomeScreen() {
             )
         }
 
-        if (isPanActive) {
+        if (isPanActive || isCtrlPressed) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
