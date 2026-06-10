@@ -111,6 +111,27 @@ val databaseTypes = mapOf(
 
 val databaseNames = databaseTypes.keys.toList()
 
+val typeMapping = mapOf(
+    "PostgreSQL->MySQL" to mapOf(
+        "integer" to "int", "bigint" to "bigint", "smallint" to "smallint",
+        "serial" to "serial", "bigserial" to "serial",
+        "numeric" to "decimal", "real" to "float", "double precision" to "double",
+        "varchar" to "varchar", "text" to "text",
+        "boolean" to "boolean",
+        "date" to "date", "timestamp" to "timestamp", "timestamptz" to "timestamp",
+        "interval" to "", "uuid" to "", "jsonb" to "json", "bytea" to "blob",
+    ),
+    "MySQL->PostgreSQL" to mapOf(
+        "int" to "integer", "bigint" to "bigint", "smallint" to "smallint",
+        "tinyint" to "smallint", "serial" to "serial",
+        "decimal" to "numeric", "float" to "real", "double" to "double precision",
+        "varchar" to "varchar", "char" to "varchar", "text" to "text",
+        "boolean" to "boolean",
+        "date" to "date", "timestamp" to "timestamp", "datetime" to "timestamp",
+        "json" to "jsonb", "blob" to "bytea",
+    ),
+)
+
 @Composable
 actual fun HomeScreen() {
     val tableDef = remember {
@@ -171,6 +192,25 @@ actual fun HomeScreen() {
     val tableNodes = graph.nodes.filter { it.definition.name == "Table" }
     var selectedDatabase by remember { mutableStateOf(databaseNames.first()) }
     val nodeColumns = remember { mutableStateMapOf<Any, MutableList<ColumnDef>>() }
+
+    var previousDatabase by remember { mutableStateOf(selectedDatabase) }
+    LaunchedEffect(selectedDatabase) {
+        if (selectedDatabase == previousDatabase) return@LaunchedEffect
+        if (nodeColumns.isEmpty()) return@LaunchedEffect
+        val mappingKey = "${previousDatabase}->${selectedDatabase}"
+        val mapping = typeMapping[mappingKey] ?: return@LaunchedEffect
+        val oldTypes = databaseTypes[previousDatabase] ?: return@LaunchedEffect
+        for ((node, cols) in nodeColumns) {
+            for (i in cols.indices) {
+                val col = cols[i]
+                if (col.type in oldTypes) {
+                    val newType = mapping[col.type] ?: col.type
+                    cols[i] = col.copy(type = newType)
+                }
+            }
+        }
+        previousDatabase = selectedDatabase
+    }
 
     DisposableEffect(Unit) {
         val dispatcher = KeyEventDispatcher { event ->
