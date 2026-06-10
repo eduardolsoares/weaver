@@ -313,7 +313,7 @@ actual fun HomeScreen() {
                 exit = slideOutHorizontally { it },
             ) {
                 val ddlText = remember(nodeColumns, graph, selectedDatabase) {
-                    DdlGenerator.generate(graph, nodeColumns, selectedDatabase)
+                    NodeParser.generate(graph, nodeColumns, selectedDatabase)
                 }
                 val scrollState = rememberScrollState()
                 Box(
