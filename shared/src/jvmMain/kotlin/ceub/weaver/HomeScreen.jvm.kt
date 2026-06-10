@@ -1,11 +1,17 @@
 package ceub.weaver
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -26,28 +32,38 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.awt.AWTEvent
 import java.awt.KeyboardFocusManager
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
+import java.awt.event.AWTEventListener
 import java.awt.event.KeyEvent as AWTKeyEvent
+import java.awt.event.MouseEvent as AWTMouseEvent
 import java.awt.KeyEventDispatcher
 
 import com.martmists.compose.grapheditor.compose.GraphState
@@ -62,9 +78,17 @@ import com.martmists.compose.grapheditor.data.NodeDefinition
 import com.martmists.compose.grapheditor.data.PortDefinition
 import com.martmists.compose.grapheditor.data.PortKind
 import com.martmists.compose.grapheditor.data.property.StringProperty
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-data class ColumnDef(val name: String, val type: String)
+data class ColumnDef(
+    val name: String,
+    val type: String,
+    val isPrimaryKey: Boolean = false,
+    val isNotNull: Boolean = false,
+    val isUnique: Boolean = false,
+)
 
 val databaseTypes = mapOf(
     "PostgreSQL" to listOf(
@@ -140,6 +164,8 @@ actual fun HomeScreen() {
     var isDarkTheme by remember { mutableStateOf(true) }
     var isPanActive by remember { mutableStateOf(false) }
     var isCtrlPressed by remember { mutableStateOf(false) }
+    var isRightClicking by remember { mutableStateOf(false) }
+    var showDdl by remember { mutableStateOf(false) }
     val style = remember(isDarkTheme) { databaseTableStyle(isDarkTheme) }
 
     val tableNodes = graph.nodes.filter { it.definition.name == "Table" }
@@ -155,9 +181,29 @@ actual fun HomeScreen() {
         }
         KeyboardFocusManager.getCurrentKeyboardFocusManager()
             .addKeyEventDispatcher(dispatcher)
+
+        val mouseListener = AWTEventListener { event ->
+            if (event is AWTMouseEvent) {
+                when (event.id) {
+                    AWTMouseEvent.MOUSE_PRESSED -> {
+                        if (event.button == AWTMouseEvent.BUTTON3) {
+                            isRightClicking = true
+                        }
+                    }
+                    AWTMouseEvent.MOUSE_RELEASED, AWTMouseEvent.MOUSE_EXITED -> {
+                        if (event.button == AWTMouseEvent.BUTTON3) {
+                            isRightClicking = false
+                        }
+                    }
+                }
+            }
+        }
+        Toolkit.getDefaultToolkit().addAWTEventListener(mouseListener, AWTEvent.MOUSE_EVENT_MASK)
+
         onDispose {
             KeyboardFocusManager.getCurrentKeyboardFocusManager()
                 .removeKeyEventDispatcher(dispatcher)
+            Toolkit.getDefaultToolkit().removeAWTEventListener(mouseListener)
         }
     }
 
@@ -181,6 +227,7 @@ actual fun HomeScreen() {
                     style = style,
                     nodeColumns = nodeColumns,
                     selectedDatabase = selectedDatabase,
+                    isRightClicking = isRightClicking,
                 )
             }
         }
@@ -215,21 +262,153 @@ actual fun HomeScreen() {
             )
         }
 
-        Box(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(12.dp)
-                .size(36.dp)
-                .clip(CircleShape)
-                .clickable { isDarkTheme = !isDarkTheme }
-                .background(style.colors.sidebar.copy(alpha = 0.9f))
-                .border(1.dp, style.colors.sidebarBorder, CircleShape),
-            contentAlignment = Alignment.Center,
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                if (isDarkTheme) "\u2600\uFE0F" else "\uD83C\uDF19",
-                style = TextStyle(fontSize = 16.sp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .clickable { isDarkTheme = !isDarkTheme }
+                    .background(style.colors.sidebar.copy(alpha = 0.9f))
+                    .border(1.dp, style.colors.sidebarBorder, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    if (isDarkTheme) "\u2600\uFE0F" else "\uD83C\uDF19",
+                    style = TextStyle(fontSize = 16.sp),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { showDdl = !showDdl }
+                    .background(if (showDdl) style.colors.selectionHighlight.copy(alpha = 0.2f) else style.colors.sidebar.copy(alpha = 0.9f))
+                    .border(1.dp, if (showDdl) style.colors.selectionHighlight else style.colors.sidebarBorder, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    "SQL",
+                    style = TextStyle(
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (showDdl) style.colors.selectionHighlight else style.colors.portName,
+                    ),
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .padding(top = 60.dp, end = 12.dp, bottom = 12.dp),
+        ) {
+            AnimatedVisibility(
+                visible = showDdl,
+                enter = slideInHorizontally { it },
+                exit = slideOutHorizontally { it },
+            ) {
+                val ddlText = remember(nodeColumns, graph, selectedDatabase) {
+                    DdlGenerator.generate(graph, nodeColumns, selectedDatabase)
+                }
+                val scrollState = rememberScrollState()
+                Box(
+                    modifier = Modifier
+                        .width(400.dp)
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(style.colors.nodeDefault)
+                        .border(1.dp, style.colors.nodeBorder, RoundedCornerShape(8.dp)),
+                ) {
+                    val scope = rememberCoroutineScope()
+                    var showCopiedToast by remember { mutableStateOf(false) }
+                    Box(Modifier.fillMaxSize().padding(12.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(style.colors.sidebar.copy(alpha = 0.3f))
+                                .border(1.dp, style.colors.nodeBorder.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                .padding(8.dp)
+                                .verticalScroll(scrollState),
+                        ) {
+                            Text(
+                                ddlText.ifEmpty { "-- No tables or enums defined" },
+                                style = TextStyle(
+                                    fontSize = 11.sp,
+                                    color = style.colors.portName,
+                                    fontFamily = FontFamily.Monospace,
+                                ),
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(style.colors.sidebar.copy(alpha = 0.9f))
+                                .border(1.dp, style.colors.sidebarBorder, RoundedCornerShape(4.dp))
+                                .clickable {
+                                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+                                    clipboard.setContents(StringSelection(ddlText), null)
+                                    showCopiedToast = true
+                                    scope.launch {
+                                        delay(2000)
+                                        showCopiedToast = false
+                                    }
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Canvas(Modifier.size(14.dp)) {
+                                val c = style.colors.portName
+                                val w = size.width
+                                val h = size.height
+                                val pad = w * 0.15f
+                                val clipW = w - pad * 2
+                                val clipH = h - pad * 2
+                                val topH = clipH * 0.3f
+                                val bodyH = clipH - topH
+
+                                drawRoundRect(c, topLeft = Offset(pad, pad), size = Size(clipW, clipH), cornerRadius = CornerRadius(w * 0.15f, w * 0.15f), style = Stroke(w * 0.12f))
+                                drawRoundRect(c, topLeft = Offset(pad, pad + topH), size = Size(clipW, bodyH), cornerRadius = CornerRadius(w * 0.12f, w * 0.12f), style = Stroke(w * 0.12f))
+                                val innerPad = w * 0.3f
+                                val lineY1 = pad + topH + bodyH * 0.3f
+                                val lineY2 = pad + topH + bodyH * 0.55f
+                                val lineY3 = pad + topH + bodyH * 0.8f
+                                drawLine(c, Offset(innerPad, lineY1), Offset(w - innerPad, lineY1), strokeWidth = w * 0.08f)
+                                drawLine(c, Offset(innerPad, lineY2), Offset(w - innerPad, lineY2), strokeWidth = w * 0.08f)
+                                drawLine(c, Offset(innerPad, lineY3), Offset(w - innerPad, lineY3), strokeWidth = w * 0.08f)
+                            }
+                        }
+
+                        if (showCopiedToast) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(y = 30.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(style.colors.selectionHighlight.copy(alpha = 0.9f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    "Copied!",
+                                    style = TextStyle(
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = style.colors.nodeDefault,
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         var dbDropdownExpanded by remember { mutableStateOf(false) }
@@ -294,6 +473,7 @@ private fun BoxScope.TableNodeAttributePanel(
     style: NodeGraphStyle,
     nodeColumns: MutableMap<Any, MutableList<ColumnDef>>,
     selectedDatabase: String,
+    isRightClicking: Boolean,
 ) {
     val density = LocalDensity.current
     val zoom = state.zoom
@@ -335,6 +515,7 @@ private fun BoxScope.TableNodeAttributePanel(
             ) {
                 columns.forEachIndexed { i, col ->
                     var expanded by remember { mutableStateOf(false) }
+                    var contextExpanded by remember { mutableStateOf(false) }
                     val interactionSource = remember { MutableInteractionSource() }
                     val isHovered by interactionSource.collectIsHoveredAsState()
                     var dragOffset by remember { mutableStateOf(0f) }
@@ -371,11 +552,128 @@ private fun BoxScope.TableNodeAttributePanel(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            col.name.ifEmpty { "new_column" },
-                            style = columnTextStyle,
-                            modifier = Modifier.weight(1f),
-                        )
+                        Box(Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    col.name.ifEmpty { "new_column" },
+                                    style = columnTextStyle,
+                                )
+
+                                if (col.isPrimaryKey) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "PK",
+                                        style = TextStyle(
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = style.colors.selectionHighlight,
+                                        ),
+                                    )
+                                }
+                                if (col.isNotNull) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "NN",
+                                        style = TextStyle(
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = style.colors.propertyFieldWarn,
+                                        ),
+                                    )
+                                }
+                                if (col.isUnique) {
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "UQ",
+                                        style = TextStyle(
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = style.colors.portName,
+                                        ),
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                if (event.type == PointerEventType.Press && isRightClicking) {
+                                                    contextExpanded = true
+                                                    event.changes.forEach { it.consume() }
+                                                }
+                                            }
+                                        }
+                                    },
+                            )
+
+                            MaterialTheme(
+                                colorScheme = MaterialTheme.colorScheme.copy(
+                                    surface = style.colors.nodeDefault,
+                                    onSurface = style.colors.portName,
+                                ),
+                            ) {
+                                DropdownMenu(
+                                    expanded = contextExpanded,
+                                    onDismissRequest = { contextExpanded = false },
+                                ) {
+                                    val toggle = { flag: Boolean -> !flag }
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = col.isPrimaryKey,
+                                                    onCheckedChange = null,
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text("Primary Key", style = columnTextStyle)
+                                            }
+                                        },
+                                        onClick = {
+                                            columns[i] = col.copy(isPrimaryKey = toggle(col.isPrimaryKey))
+                                            contextExpanded = false
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = col.isNotNull,
+                                                    onCheckedChange = null,
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text("Not Null", style = columnTextStyle)
+                                            }
+                                        },
+                                        onClick = {
+                                            columns[i] = col.copy(isNotNull = toggle(col.isNotNull))
+                                            contextExpanded = false
+                                        },
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Checkbox(
+                                                    checked = col.isUnique,
+                                                    onCheckedChange = null,
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text("Unique", style = columnTextStyle)
+                                            }
+                                        },
+                                        onClick = {
+                                            columns[i] = col.copy(isUnique = toggle(col.isUnique))
+                                            contextExpanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
 
                         Box {
                             Text(
