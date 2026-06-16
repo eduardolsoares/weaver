@@ -91,7 +91,8 @@ fun main() = application {
                         },
                         onFetchProjects = { email -> apiService.fetchUserProjects(email) },
                         onCreateProject = { name, email -> apiService.createProject(name, email) },
-                        onDeleteProject = {projectId -> apiService.deleteProject(projectId) }
+                        onDeleteProject = {projectId -> apiService.deleteProject(projectId) },
+                        onRenameProject = { projectId, newName -> apiService.renameProject(projectId, newName) }
                     )
                 } else {
                     HomeScreen()

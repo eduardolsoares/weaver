@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,7 +15,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun RecentProjectCard(title: String, lastModified: String, onClick: () -> Unit) {
+fun RecentProjectCard(
+    title: String,
+    lastModified: String,
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onRenameClick: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .width(180.dp)
@@ -72,8 +80,12 @@ fun RecentProjectCard(title: String, lastModified: String, onClick: () -> Unit) 
                 )
             }
 
+            // 🟢 3. Modificado o container dos três pontinhos para abrir o Dropdown
             Box(
-                modifier = Modifier.padding(start = 4.dp).size(24.dp).clickable { },
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .size(24.dp)
+                    .clickable { expanded = true }, // Abre o menu ao clicar nos três pontinhos
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -82,6 +94,38 @@ fun RecentProjectCard(title: String, lastModified: String, onClick: () -> Unit) 
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+
+                // 🟢 4. O Menu flutuante acoplado exatamente abaixo dos três pontinhos
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }, // Fecha se o usuário clicar fora
+                    modifier = Modifier.background(Color(0xFF1E293B)) // Mantém o tema Dark do card
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "Renomear",
+                                color = Color(0xFFF1F5F9)
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            onRenameClick()
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "Deletar",
+                                color = Color(0xFFEF4444) // Vermelho Tailwind (destructive action)
+                            )
+                        },
+                        onClick = {
+                            expanded = false // Fecha a barrinha
+                            onDeleteClick()  // Dispara o callback que remove do banco
+                        }
+                    )
+                }
             }
         }
     }

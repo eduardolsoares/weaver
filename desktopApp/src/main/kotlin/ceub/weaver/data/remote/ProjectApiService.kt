@@ -17,6 +17,7 @@ class ProjectApiService {
             json(Json {
                 ignoreUnknownKeys = true
                 prettyPrint = true
+                coerceInputValues = true
             })
         }
     }
@@ -51,6 +52,18 @@ class ProjectApiService {
             response.status.isSuccess()
         } catch (e: Exception) {
             println("Erro ao deletar projeto: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun renameProject(projectId: String, newName: String): Boolean {
+        return try {
+            val response = client.put("$baseUrl/update/$projectId") {
+                parameter("new_name", newName)
+            }
+            response.status.isSuccess()
+        } catch (e: Exception) {
+            println("Erro ao renomear projeto: ${e.message}")
             false
         }
     }

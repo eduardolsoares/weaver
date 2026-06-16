@@ -2,7 +2,6 @@ package ceub.weaver
 
 import androidx.compose.runtime.*
 import ceub.weaver.ui.mainScreen.MainScreen
-import ceub.weaver.HomeScreen
 import ceub.weaver.domain.model.ProjectResponse
 
 enum class ScreenRoute {
@@ -18,7 +17,8 @@ fun App(
     onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit,
     onFetchProjects: suspend (String) -> List<ProjectResponse>,
     onCreateProject: suspend (String, String) -> ProjectResponse?,
-    onDeleteProject: suspend (String) -> Boolean
+    onDeleteProject: suspend (String) -> Boolean,
+    onRenameProject: suspend (String, String) -> Boolean,
 ) {
     var currentScreen by remember(token) {
         mutableStateOf(if (token != null) ScreenRoute.MAIN else ScreenRoute.LOGIN)
@@ -54,7 +54,8 @@ fun App(
                 },
                 onFetchProjects = onFetchProjects,
                 onCreateProject = onCreateProject,
-                onDeleteProject = onDeleteProject
+                onDeleteProject = onDeleteProject,
+                onRenameProject = onRenameProject
             )
         }
 
