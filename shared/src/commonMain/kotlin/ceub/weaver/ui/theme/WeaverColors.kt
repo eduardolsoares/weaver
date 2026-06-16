@@ -1,4 +1,4 @@
-package ceub.weaver.ui
+package ceub.weaver.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

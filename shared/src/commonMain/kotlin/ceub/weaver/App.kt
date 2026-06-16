@@ -1,33 +1,64 @@
 package ceub.weaver
 
 import androidx.compose.runtime.*
+import ceub.weaver.ui.mainScreen.MainScreen
+import ceub.weaver.HomeScreen
+import ceub.weaver.domain.model.ProjectResponse
 
-enum class Rota {
+enum class ScreenRoute {
     LOGIN,
+    MAIN,
     HOME
 }
 
 @Composable
 fun App(
-    onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit
+    token: String?,
+    onTokenChanged: (String?) -> Unit,
+    onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit,
+    onFetchProjects: suspend (String) -> List<ProjectResponse>,
+    onCreateProject: suspend (String, String) -> ProjectResponse?,
+    onDeleteProject: suspend (String) -> Boolean
 ) {
-    var telaAtual by remember { mutableStateOf(Rota.LOGIN) }
+    var currentScreen by remember(token) {
+        mutableStateOf(if (token != null) ScreenRoute.MAIN else ScreenRoute.LOGIN)
+    }
+    var selectedProject by remember { mutableStateOf("") }
 
-    when (telaAtual) {
-        Rota.LOGIN -> {
+    when (currentScreen) {
+        ScreenRoute.LOGIN -> {
             LoginScreen(
                 onLoginSuccess = {
-                    telaAtual = Rota.HOME
+                    onTokenChanged("skipped")
+                    currentScreen = ScreenRoute.MAIN
                 },
                 onGoogleLoginClick = {
                     onGoogleLoginRequest(
-                        { telaAtual = Rota.HOME },
+                        { currentScreen = ScreenRoute.MAIN },
                         { println("Login failed: ${it.message}") }
                     )
                 }
             )
         }
-        Rota.HOME -> {
+
+        ScreenRoute.MAIN -> {
+            MainScreen(
+                userEmail = "arthur@email.com",
+                onNewProjectClick = {
+                    selectedProject = "New Project"
+                    currentScreen = ScreenRoute.HOME
+                },
+                onProjectClick = { projectName ->
+                    selectedProject = projectName
+                    currentScreen = ScreenRoute.HOME
+                },
+                onFetchProjects = onFetchProjects,
+                onCreateProject = onCreateProject,
+                onDeleteProject = onDeleteProject
+            )
+        }
+
+        ScreenRoute.HOME -> {
             HomeScreen()
         }
     }

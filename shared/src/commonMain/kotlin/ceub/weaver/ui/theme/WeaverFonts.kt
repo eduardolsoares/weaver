@@ -1,4 +1,4 @@
-package ceub.weaver.ui
+package ceub.weaver.ui.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontFamily

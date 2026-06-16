@@ -15,14 +15,18 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import ceub.weaver.data.local.TokenStorage
 import ceub.weaver.data.remote.GoogleOAuthClient
+import ceub.weaver.data.remote.ProjectApiService
 import ceub.weaver.data.repository.GoogleAuthRepositoryImpl
 import ceub.weaver.domain.usecase.GoogleLoginUseCase
+import ceub.weaver.ui.mainScreen.MainScreen
 import io.github.cdimascio.dotenv.dotenv
+
 fun main() = application {
     var token by remember { mutableStateOf<String?>(null) }
-    val env = remember { 
+    val apiService = remember { ProjectApiService() }
+    val env = remember {
         dotenv()
-     }
+    }
     val clientSecret = env["GOOGLE_CLIENT_SECRET"]
     if (token == null) {
         val oauthClient = remember {
@@ -71,7 +75,27 @@ fun main() = application {
             ),
         ) {
             Box(Modifier.fillMaxSize().background(Color(0xFF0A0C0F))) {
-                HomeScreen()
+                var showEditor by remember { mutableStateOf(false) }
+                var selectedProject by remember { mutableStateOf("") }
+
+                if (!showEditor) {
+                    MainScreen(
+                        userEmail = "arthur@email.com",
+                        onNewProjectClick = {
+                            selectedProject = "New Project"
+                            showEditor = true
+                        },
+                        onProjectClick = { projectName ->
+                            selectedProject = projectName
+                            showEditor = true
+                        },
+                        onFetchProjects = { email -> apiService.fetchUserProjects(email) },
+                        onCreateProject = { name, email -> apiService.createProject(name, email) },
+                        onDeleteProject = {projectId -> apiService.deleteProject(projectId) }
+                    )
+                } else {
+                    HomeScreen()
+                }
             }
         }
     }

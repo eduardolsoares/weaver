@@ -13,10 +13,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-
-import weaver.shared.generated.resources.Res
 import weaver.shared.generated.resources.*
-import ceub.weaver.ui.*
+import ceub.weaver.ui.theme.*
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
