@@ -17,13 +17,15 @@ fun App(
     onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit,
     onFetchProjects: suspend (String) -> List<ProjectResponse>,
     onCreateProject: suspend (String, String) -> ProjectResponse?,
-    onDeleteProject: suspend (String) -> Boolean,
-    onRenameProject: suspend (String, String) -> Boolean,
+    onDeleteProject: suspend (String, String) -> Boolean,
+    onRenameProject: suspend (String, String, String) -> Boolean,
 ) {
     var currentScreen by remember(token) {
         mutableStateOf(if (token != null) ScreenRoute.MAIN else ScreenRoute.LOGIN)
     }
     var selectedProject by remember { mutableStateOf("") }
+
+    val tokenReal = token ?: ""
 
     when (currentScreen) {
         ScreenRoute.LOGIN -> {
@@ -43,7 +45,7 @@ fun App(
 
         ScreenRoute.MAIN -> {
             MainScreen(
-                userEmail = "arthur@email.com",
+                idToken = tokenReal,
                 onNewProjectClick = {
                     selectedProject = "New Project"
                     currentScreen = ScreenRoute.HOME

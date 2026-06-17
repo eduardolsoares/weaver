@@ -24,6 +24,7 @@ import io.github.cdimascio.dotenv.dotenv
 fun main() = application {
     var token by remember { mutableStateOf<String?>(null) }
     val apiService = remember { ProjectApiService() }
+    val storage = remember { TokenStorage() }
     val env = remember {
         dotenv()
     }
@@ -36,7 +37,6 @@ fun main() = application {
                 clientSecret = clientSecret,
             )
         }
-        val storage = remember { TokenStorage() }
         val repository = remember { GoogleAuthRepositoryImpl(storage, oauthClient) }
         val loginUseCase = remember { GoogleLoginUseCase(repository) }
 
@@ -56,7 +56,10 @@ fun main() = application {
                     onGoogleLoginClick = {
                         GoogleAuth.iniciarLogin(
                             useCase = loginUseCase,
-                            onSuccess = { token = "skipped" },
+                            onSuccess = {
+                                val authToken = storage.load()
+                                token = authToken?.accessToken
+                            },
                             onError = { println("Login error: ${it.message}") }
                         )
                     }
@@ -66,6 +69,7 @@ fun main() = application {
     }
 
     if (token != null) {
+        val tokenReal = token!!
         Window(
             onCloseRequest = ::exitApplication,
             title = "weaver - database modeler",
@@ -80,7 +84,7 @@ fun main() = application {
 
                 if (!showEditor) {
                     MainScreen(
-                        userEmail = "arthur@email.com",
+                        idToken = tokenReal,
                         onNewProjectClick = {
                             selectedProject = "New Project"
                             showEditor = true
@@ -89,10 +93,10 @@ fun main() = application {
                             selectedProject = projectName
                             showEditor = true
                         },
-                        onFetchProjects = { email -> apiService.fetchUserProjects(email) },
-                        onCreateProject = { name, email -> apiService.createProject(name, email) },
-                        onDeleteProject = {projectId -> apiService.deleteProject(projectId) },
-                        onRenameProject = { projectId, newName -> apiService.renameProject(projectId, newName) }
+                        onFetchProjects = { token -> apiService.fetchUserProjects(token) },
+                        onCreateProject = { name, token -> apiService.createProject(name, token) },
+                        onDeleteProject = { id, token -> apiService.deleteProject(id, token) },
+                        onRenameProject = { id, name, token -> apiService.renameProject(id, name, token) }
                     )
                 } else {
                     HomeScreen()

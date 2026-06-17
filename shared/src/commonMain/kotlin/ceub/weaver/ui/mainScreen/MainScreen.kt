@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import ceub.weaver.ui.mainScreen.components.* // 🟢 Importa todos os seus novos componentes limpos
+import ceub.weaver.ui.mainScreen.components.*
 import ceub.weaver.domain.model.ProjectResponse
 import kotlinx.coroutines.launch
 
@@ -17,11 +17,11 @@ import kotlinx.coroutines.launch
 fun MainScreen(
     onNewProjectClick: () -> Unit,
     onProjectClick: (projectName: String) -> Unit,
-    userEmail: String = "arthur@email.com",
+    idToken: String,
     onFetchProjects: suspend (String) -> List<ProjectResponse>,
     onCreateProject: suspend (String, String) -> ProjectResponse?,
-    onDeleteProject: suspend (String) -> Boolean,
-    onRenameProject: suspend (String, String) -> Boolean
+    onDeleteProject: suspend (String, String) -> Boolean,
+    onRenameProject: suspend (String, String, String) -> Boolean
 ) {
     val scope = rememberCoroutineScope()
     val namePattern = remember { Regex("^[a-zA-Z0-9 áàâãéèêíïóôõöúçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÇÑ]*$") }
@@ -36,13 +36,12 @@ fun MainScreen(
     var newNameInput by remember { mutableStateOf("") }
     var renameErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(userEmail) {
+    LaunchedEffect(idToken) {
         isLoading = true
-        projects = onFetchProjects(userEmail)
+        projects = onFetchProjects(idToken)
         isLoading = false
     }
 
-    // 🟢 Componente isolado de Alerta
     if (showDeleteDialog) {
         DeleteConfirmationDialog(
             project = projectToConfirmDelete,
@@ -51,8 +50,8 @@ fun MainScreen(
                 showDeleteDialog = false
                 projectToConfirmDelete?.id?.let { projectId ->
                     scope.launch {
-                        if (onDeleteProject(projectId)) {
-                            projects = onFetchProjects(userEmail)
+                        if (onDeleteProject(projectId, idToken)) {
+                            projects = onFetchProjects(idToken)
                         }
                     }
                 }
@@ -64,9 +63,9 @@ fun MainScreen(
         AlertDialog(
             onDismissRequest = {
                 showRenameDialog = false
-                renameErrorMessage = null // Limpa o erro ao fechar
+                renameErrorMessage = null
             },
-            containerColor = Color(0xFF1E293B), // Slate-800
+            containerColor = Color(0xFF1E293B),
             title = {
                 Text("Renomear Projeto", color = Color(0xFFF1F5F9), style = MaterialTheme.typography.titleMedium)
             },
@@ -78,27 +77,25 @@ fun MainScreen(
                         value = newNameInput,
                         onValueChange = {
                             newNameInput = it
-                            // 🟢 Limpa o aviso de erro assim que o usuário volta a digitar
                             if (renameErrorMessage != null) renameErrorMessage = null
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        isError = renameErrorMessage != null, // 🟢 Deixa a borda vermelha se houver erro
+                        isError = renameErrorMessage != null,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color(0xFF0A0C0F),
                             unfocusedContainerColor = Color(0xFF0A0C0F),
                             focusedTextColor = Color(0xFFF1F5F9),
                             unfocusedTextColor = Color(0xFFF1F5F9),
                             cursorColor = Color(0xFF818CF8),
-                            errorContainerColor = Color(0xFF0A0C0F) // Mantém o fundo escuro no erro
+                            errorContainerColor = Color(0xFF0A0C0F)
                         )
                     )
 
-                    // 🟢 Exibe o aviso de erro logo abaixo do TextField se ele existir
                     if (renameErrorMessage != null) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = renameErrorMessage!!,
-                            color = Color(0xFFEF4444), // Vermelho do Tailwind
+                            color = Color(0xFFEF4444),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -107,22 +104,20 @@ fun MainScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        // 🟢 Validações ao tentar Salvar:
                         when {
                             newNameInput.isBlank() -> {
                                 renameErrorMessage = "O nome do projeto não pode ser vazio."
                             }
                             !newNameInput.matches(namePattern) -> {
-                                renameErrorMessage = "Caracteres especiais ou emojis não são permitidos."
+                                renameErrorMessage = "Caracteres especiais não são permitidos."
                             }
                             else -> {
-                                // Se passou nas duas travas, executa a requisição
                                 showRenameDialog = false
                                 renameErrorMessage = null
                                 projectToRename?.id?.let { projectId ->
                                     scope.launch {
-                                        if (onRenameProject(projectId, newNameInput)) {
-                                            projects = onFetchProjects(userEmail)
+                                        if (onRenameProject(projectId, newNameInput, idToken)) {
+                                            projects = onFetchProjects(idToken)
                                         }
                                     }
                                 }
@@ -137,7 +132,7 @@ fun MainScreen(
                 TextButton(
                     onClick = {
                         showRenameDialog = false
-                        renameErrorMessage = null // Limpa o erro ao cancelar
+                        renameErrorMessage = null
                     }
                 ) {
                     Text("Cancelar", color = Color(0xFF94A3B8))
@@ -157,20 +152,18 @@ fun MainScreen(
                 .padding(padding)
         ) {
 
-            // 🟢 Seção de criação limpa e modular
             item {
                 NewProjectSection(onCardClick = {
                     scope.launch {
-                        val newProject = onCreateProject("Projeto sem nome", userEmail)
+                        val newProject = onCreateProject("Projeto sem nome", idToken)
                         if (newProject != null) {
-                            projects = onFetchProjects(userEmail)
+                            projects = onFetchProjects(idToken)
                             onNewProjectClick()
                         }
                     }
                 })
             }
 
-            // Section: Recent modelings
             item {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Column(

@@ -87,17 +87,18 @@ class GoogleOAuthClient(
     }
 
     private fun parseTokenResponse(json: String): AuthToken {
-        val accessToken =
-            extractJsonString(json, "access_token")
-                ?: throw OAuthResponseException("Missing access_token in response: $json")
+        val idToken = extractJsonString(json, "id_token")
+
+        val accessToken = extractJsonString(json, "access_token")
+            ?: throw OAuthResponseException("Missing access_token in response: $json")
+
         val refreshToken = extractJsonString(json, "refresh_token")
-        val expiresIn =
-            extractJsonString(json, "expires_in")?.toLongOrNull() ?: 3600
+        val expiresIn = extractJsonString(json, "expires_in")?.toLongOrNull() ?: 3600
         val scope = extractJsonString(json, "scope") ?: ""
         val tokenType = extractJsonString(json, "token_type") ?: "Bearer"
 
         return AuthToken(
-            accessToken = accessToken,
+            accessToken = idToken ?: accessToken,
             refreshToken = refreshToken,
             expiresIn = expiresIn,
             scope = scope,

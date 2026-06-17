@@ -1,6 +1,5 @@
 package ceub.weaver.data.remote
 
-import ceub.weaver.domain.model.ProjectCreateRequest
 import ceub.weaver.domain.model.ProjectResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -24,31 +23,41 @@ class ProjectApiService {
 
     private val baseUrl = "http://127.0.0.1:8000/api/projects"
 
-    suspend fun fetchUserProjects(email: String): List<ProjectResponse> {
+    suspend fun fetchUserProjects(idToken: String): List<ProjectResponse> {
         return try {
-            client.get("$baseUrl/users/$email").body()
+            val response = client.get("$baseUrl/users") {
+                headers { append(HttpHeaders.Authorization, "Bearer $idToken") }
+            }
+            if (response.status.isSuccess()) response.body() else emptyList()
         } catch (e: Exception) {
             println("Erro ao buscar projetos: ${e.message}")
             emptyList()
         }
     }
 
-    suspend fun createProject(name: String, email: String): ProjectResponse? {
+    suspend fun createProject(projectName: String, idToken: String): ProjectResponse? {
         return try {
-            client.post("$baseUrl/create") {
-                contentType(ContentType.Application.Json)
+            val response = client.post("$baseUrl/create") {
+                parameter("name", projectName)
 
-                setBody(ProjectCreateRequest(name = name, userEmail = email))
-            }.body()
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $idToken")
+                }
+            }
+            if (response.status.isSuccess()) response.body() else null
         } catch (e: Exception) {
             println("Erro ao criar projeto: ${e.message}")
             null
         }
     }
 
-    suspend fun deleteProject(projectId: String): Boolean {
+    suspend fun deleteProject(projectId: String, idToken: String): Boolean {
         return try {
-            val response = client.delete("$baseUrl/delete/$projectId")
+            val response = client.delete("$baseUrl/delete/$projectId") {
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $idToken")
+                }
+            }
             response.status.isSuccess()
         } catch (e: Exception) {
             println("Erro ao deletar projeto: ${e.message}")
@@ -56,10 +65,13 @@ class ProjectApiService {
         }
     }
 
-    suspend fun renameProject(projectId: String, newName: String): Boolean {
+    suspend fun renameProject(projectId: String, newName: String, idToken: String): Boolean {
         return try {
             val response = client.put("$baseUrl/update/$projectId") {
                 parameter("new_name", newName)
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $idToken")
+                }
             }
             response.status.isSuccess()
         } catch (e: Exception) {
