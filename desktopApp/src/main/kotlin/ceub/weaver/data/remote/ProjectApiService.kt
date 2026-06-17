@@ -53,7 +53,7 @@ class ProjectApiService {
 
     suspend fun deleteProject(projectId: String, idToken: String): Boolean {
         return try {
-            val response = client.delete("$baseUrl/delete/$projectId") {
+            val response = client.delete("$baseUrl/$projectId") {
                 headers {
                     append(HttpHeaders.Authorization, "Bearer $idToken")
                 }
@@ -67,7 +67,7 @@ class ProjectApiService {
 
     suspend fun renameProject(projectId: String, newName: String, idToken: String): Boolean {
         return try {
-            val response = client.put("$baseUrl/update/$projectId") {
+            val response = client.put("$baseUrl/$projectId") {
                 parameter("new_name", newName)
                 headers {
                     append(HttpHeaders.Authorization, "Bearer $idToken")

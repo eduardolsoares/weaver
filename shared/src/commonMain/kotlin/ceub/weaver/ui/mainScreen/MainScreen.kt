@@ -77,7 +77,7 @@ fun MainScreen(
                         value = newNameInput,
                         onValueChange = {
                             newNameInput = it
-                            if (renameErrorMessage != null) renameErrorMessage = null
+                            renameErrorMessage = null
                         },
                         modifier = Modifier.fillMaxWidth(),
                         isError = renameErrorMessage != null,
