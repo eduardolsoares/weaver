@@ -30,7 +30,7 @@ object GoogleAuth {
                 "?client_id=$GOOGLE_CLIENT_ID" +
                 "&redirect_uri=$GOOGLE_REDIRECT_URI" +
                 "&response_type=code" +
-                "&scope=https://www.googleapis.com/auth/userinfo.email" +
+                "&scope=openid%20https://www.googleapis.com/auth/userinfo.email" +
                 "&code_challenge=$codeChallenge" +
                 "&code_challenge_method=S256"
 

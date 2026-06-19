@@ -15,14 +15,19 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import ceub.weaver.data.local.TokenStorage
 import ceub.weaver.data.remote.GoogleOAuthClient
+import ceub.weaver.data.remote.ProjectApiService
 import ceub.weaver.data.repository.GoogleAuthRepositoryImpl
 import ceub.weaver.domain.usecase.GoogleLoginUseCase
+import ceub.weaver.ui.mainScreen.MainScreen
 import io.github.cdimascio.dotenv.dotenv
+
 fun main() = application {
     var token by remember { mutableStateOf<String?>(null) }
-    val env = remember { 
+    val apiService = remember { ProjectApiService() }
+    val storage = remember { TokenStorage() }
+    val env = remember {
         dotenv()
-     }
+    }
     val clientSecret = env["GOOGLE_CLIENT_SECRET"]
     if (token == null) {
         val oauthClient = remember {
@@ -32,7 +37,6 @@ fun main() = application {
                 clientSecret = clientSecret,
             )
         }
-        val storage = remember { TokenStorage() }
         val repository = remember { GoogleAuthRepositoryImpl(storage, oauthClient) }
         val loginUseCase = remember { GoogleLoginUseCase(repository) }
 
@@ -52,7 +56,10 @@ fun main() = application {
                     onGoogleLoginClick = {
                         GoogleAuth.iniciarLogin(
                             useCase = loginUseCase,
-                            onSuccess = { token = "skipped" },
+                            onSuccess = {
+                                val authToken = storage.load()
+                                token = authToken?.accessToken
+                            },
                             onError = { println("Login error: ${it.message}") }
                         )
                     }
@@ -62,6 +69,7 @@ fun main() = application {
     }
 
     if (token != null) {
+        val tokenReal = token!!
         Window(
             onCloseRequest = ::exitApplication,
             title = "weaver - database modeler",
@@ -71,7 +79,28 @@ fun main() = application {
             ),
         ) {
             Box(Modifier.fillMaxSize().background(Color(0xFF0A0C0F))) {
-                HomeScreen()
+                var showEditor by remember { mutableStateOf(false) }
+                var selectedProject by remember { mutableStateOf("") }
+
+                if (!showEditor) {
+                    MainScreen(
+                        idToken = tokenReal,
+                        onNewProjectClick = {
+                            selectedProject = "New Project"
+                            showEditor = true
+                        },
+                        onProjectClick = { projectName ->
+                            selectedProject = projectName
+                            showEditor = true
+                        },
+                        onFetchProjects = { token -> apiService.fetchUserProjects(token) },
+                        onCreateProject = { name, token -> apiService.createProject(name, token) },
+                        onDeleteProject = { id, token -> apiService.deleteProject(id, token) },
+                        onRenameProject = { id, name, token -> apiService.renameProject(id, name, token) }
+                    )
+                } else {
+                    HomeScreen()
+                }
             }
         }
     }

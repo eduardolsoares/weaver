@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    kotlin("plugin.serialization") version "2.0.0" // Use a mesma versão do seu Kotlin
 }
 
 kotlin {
@@ -18,16 +19,16 @@ kotlin {
             }
         }
     }
-    
+
     js {
         browser()
     }
-    
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser()
     }
-    
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -38,6 +39,8 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
+
+            implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-server-core:3.5.0")

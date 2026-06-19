@@ -13,7 +13,10 @@ dependencies {
     implementation(libs.kotlinx.coroutinesSwing)
 
     implementation(libs.compose.uiToolingPreview)
-
+    implementation("io.ktor:ktor-client-core:3.0.1")
+    implementation("io.ktor:ktor-client-cio:3.0.1")
+    implementation("io.ktor:ktor-client-content-negotiation:3.0.1")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.1")
     implementation("io.ktor:ktor-server-core:3.5.0")
     implementation("io.ktor:ktor-server-netty:3.5.0")
     implementation("io.ktor:ktor-server-host-common:3.5.0")
@@ -29,5 +32,11 @@ compose.desktop {
             packageName = "ceub.weaver"
             packageVersion = "1.0.0"
         }
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xskip-prerelease-check")
     }
 }

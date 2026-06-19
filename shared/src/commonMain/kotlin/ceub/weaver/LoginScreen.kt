@@ -12,21 +12,13 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontFamily
-import org.jetbrains.compose.resources.Font
 import org.jetbrains.compose.resources.painterResource
-
-import weaver.shared.generated.resources.Res
 import weaver.shared.generated.resources.*
-
-val CorRoxa = Color(0xFF7022B8)
-val CorCinzaTexto = Color(0xFFC7C7C7)
-val CorAzulBotao = Color(0xFF0080FF)
-val CorBordaInput = Color(0xFF333333)
+import ceub.weaver.ui.theme.*
 
 @Composable
 fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
-    val lexendFont = getLexendFontFamily()
+    val lexendFont = WeaverFonts.getLexendFontFamily()
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -39,7 +31,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
         ) {
             Text(
                 text = "Weaver Studio",
-                color = CorRoxa,
+                color = WeaverColors.ThemePurple,
                 fontSize = 80.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 85.sp,
@@ -47,7 +39,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
             )
             Text(
                 text = "Design database architectures and generate DDL scripts.",
-                color = CorCinzaTexto,
+                color = WeaverColors.TextGray,
                 fontSize = 30.sp,
                 modifier = Modifier.padding(top = 10.dp),
                 fontFamily = lexendFont
@@ -64,7 +56,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
         ) {
             Text(
                 "Create your account",
-                color = CorCinzaTexto,
+                color = WeaverColors.TextGray,
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 30.dp),
                 fontFamily = lexendFont
@@ -83,10 +75,10 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 40.dp),
-                color = CorBordaInput
+                color = WeaverColors.InputBorder
             )
 
-            Text("Email", color = CorCinzaTexto, fontSize = 14.sp, fontFamily = lexendFont)
+            Text("Email", color = WeaverColors.TextGray, fontSize = 14.sp, fontFamily = lexendFont)
             var email by remember { mutableStateOf("") }
 
             OutlinedTextField(
@@ -98,7 +90,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     focusedBorderColor = Color.White,
-                    unfocusedBorderColor = CorBordaInput,
+                    unfocusedBorderColor = WeaverColors.InputBorder,
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White
                 ),
@@ -116,7 +108,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
             Button(
                 onClick = { onLoginSuccess() },
                 modifier = Modifier.fillMaxWidth().height(55.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = CorAzulBotao),
+                colors = ButtonDefaults.buttonColors(containerColor = WeaverColors.ButtonBlue),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Continue", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = lexendFont)
@@ -132,7 +124,7 @@ fun SocialButton(text: String, icon: Painter, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().height(55.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CorBordaInput)
+        border = androidx.compose.foundation.BorderStroke(1.dp, WeaverColors.InputBorder)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -153,10 +145,3 @@ fun SocialButton(text: String, icon: Painter, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun getLexendFontFamily(): FontFamily {
-    return FontFamily(
-        Font(Res.font.Lexend_Regular, FontWeight.Normal),
-        Font(Res.font.Lexend_Bold, FontWeight.Bold)
-    )
-}
