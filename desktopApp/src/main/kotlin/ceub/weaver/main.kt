@@ -22,6 +22,7 @@ import ceub.weaver.domain.model.AuthToken
 import io.github.cdimascio.dotenv.dotenv
 
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import java.io.IOException
 
 fun main() = application {
     val storage = remember { TokenStorage() }
@@ -58,8 +59,11 @@ fun main() = application {
                         inputStream.close()
                     }
                 }
+            } catch (e: IOException) {
+                println("[DEBUG FOTO] Erro de conexão de rede ou timeout ao buscar avatar: ${e.message}")
+                avatarBitmap = null
             } catch (e: Exception) {
-                println("[DEBUG FOTO] ERRO CRÍTICO NO PROCESSO: ${e.message}")
+                println("[DEBUG FOTO] Erro interno de processamento da imagem: ${e.message}")
                 e.printStackTrace()
                 avatarBitmap = null
             }

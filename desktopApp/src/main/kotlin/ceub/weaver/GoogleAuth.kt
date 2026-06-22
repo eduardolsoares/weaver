@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.awt.Desktop
+import java.io.IOException
+import java.net.BindException
 import java.net.URI
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -30,7 +32,7 @@ object GoogleAuth {
                 "?client_id=$GOOGLE_CLIENT_ID" +
                 "&redirect_uri=$GOOGLE_REDIRECT_URI" +
                 "&response_type=code" +
-        "&scope=openid%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile" +
+                "&scope=openid%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile" +
                 "&code_challenge=$codeChallenge" +
                 "&code_challenge_method=S256"
 
@@ -45,7 +47,8 @@ object GoogleAuth {
                     else -> Runtime.getRuntime().exec(arrayOf("xdg-open", url))
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            println("[GoogleAuth] Erro ao tentar abrir o navegador padrão: ${e.message}")
             onError(e)
             return
         }
@@ -96,7 +99,11 @@ object GoogleAuth {
                     }
                 }
                 server.start(wait = false)
-            } catch (e: Exception) {
+            } catch (e: BindException) {
+                println("[GoogleAuth] Erro de inicialização: A porta 8082 já está ocupada por outra aplicação.")
+                onError(e)
+            } catch (e: IOException) {
+                println("[GoogleAuth] Falha de E/S no servidor Ktor embutido: ${e.message}")
                 onError(e)
             }
         }

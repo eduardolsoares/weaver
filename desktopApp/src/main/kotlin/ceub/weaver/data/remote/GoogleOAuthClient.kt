@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.DataOutputStream
+import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URI
@@ -41,7 +42,7 @@ class GoogleOAuthClient(
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
                 connection.responseCode == 200
-            } catch (_: Exception) {
+            } catch (_: IOException) {
                 false
             }
         }
@@ -91,7 +92,6 @@ class GoogleOAuthClient(
             ?: throw OAuthResponseException("Missing access_token in response: $json")
 
         val idToken = extractJsonString(json, "id_token")
-
         val refreshToken = extractJsonString(json, "refresh_token")
         val expiresIn = extractExpiresIn(json) ?: 3600L
         val scope = extractJsonString(json, "scope") ?: ""

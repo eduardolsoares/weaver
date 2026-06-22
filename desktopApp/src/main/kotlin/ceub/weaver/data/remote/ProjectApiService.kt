@@ -5,11 +5,13 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.ResponseException
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.http.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.IOException
 import java.util.Base64
 
 class ProjectApiService {
@@ -64,13 +66,16 @@ class ProjectApiService {
                 in 200..299 -> Result.success(response.body())
                 else -> Result.failure(Exception("SERVER_ERROR"))
             }
-        } catch (e: Exception) {
-            println("[ApiService] Erro bruto capturado: ${e.message}")
-            if (e.message?.contains("401") == true) {
+        } catch (e: ResponseException) {
+            println("[ApiService] Erro de resposta do servidor: Status ${e.response.status.value}")
+            if (e.response.status.value == 401) {
                 Result.failure(IllegalArgumentException("AUTH_TOKEN_EXPIRED"))
             } else {
-                Result.failure(Exception("NETWORK_ERROR"))
+                Result.failure(Exception("SERVER_ERROR"))
             }
+        } catch (e: IOException) {
+            println("[ApiService] Erro de conexão de rede/timeout: ${e.message}")
+            Result.failure(Exception("NETWORK_ERROR"))
         }
     }
 
@@ -84,8 +89,11 @@ class ProjectApiService {
             }
             if (response.status.value == 401) throw IllegalArgumentException("AUTH_TOKEN_EXPIRED")
             if (response.status.isSuccess()) response.body() else null
-        } catch (e: Exception) {
-            println("Erro ao criar projeto: ${e.message}")
+        } catch (e: ResponseException) {
+            println("Erro de resposta do servidor ao criar projeto: Status ${e.response.status.value}")
+            null
+        } catch (e: IOException) {
+            println("Erro de rede ao criar projeto: ${e.message}")
             null
         }
     }
@@ -99,8 +107,11 @@ class ProjectApiService {
             }
             if (response.status.value == 401) throw IllegalArgumentException("AUTH_TOKEN_EXPIRED")
             response.status.isSuccess()
-        } catch (e: Exception) {
-            println("Erro ao deletar projeto: ${e.message}")
+        } catch (e: ResponseException) {
+            println("Erro de resposta do servidor ao deletar projeto: Status ${e.response.status.value}")
+            false
+        } catch (e: IOException) {
+            println("Erro de rede ao deletar projeto: ${e.message}")
             false
         }
     }
@@ -115,8 +126,11 @@ class ProjectApiService {
             }
             if (response.status.value == 401) throw IllegalArgumentException("AUTH_TOKEN_EXPIRED")
             response.status.isSuccess()
-        } catch (e: Exception) {
-            println("Erro ao renomear projeto: ${e.message}")
+        } catch (e: ResponseException) {
+            println("Erro de resposta do servidor ao renomear projeto: Status ${e.response.status.value}")
+            false
+        } catch (e: IOException) {
+            println("Erro de rede ao renomear projeto: ${e.message}")
             false
         }
     }

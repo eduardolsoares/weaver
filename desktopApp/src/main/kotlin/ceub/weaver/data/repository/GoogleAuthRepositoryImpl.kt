@@ -2,9 +2,12 @@ package ceub.weaver.data.repository
 
 import ceub.weaver.data.local.TokenStorage
 import ceub.weaver.data.remote.GoogleOAuthClient
+import ceub.weaver.data.remote.OAuthRequestException
+import ceub.weaver.data.remote.OAuthResponseException
 import ceub.weaver.domain.model.AuthState
 import ceub.weaver.domain.model.AuthToken
 import ceub.weaver.domain.repository.AuthRepository
+import java.io.IOException
 
 class GoogleAuthRepositoryImpl(
     private val storage: TokenStorage,
@@ -40,9 +43,7 @@ class GoogleAuthRepositoryImpl(
         codeVerifier: String
     ): AuthToken {
         val token = client.exchangeAuthorizationCode(code, codeVerifier)
-
         storage.save(token)
-
         return token
     }
 
@@ -75,7 +76,14 @@ class GoogleAuthRepositoryImpl(
         val refreshToken = token.refreshToken ?: return null
         return try {
             client.refreshToken(refreshToken)
-        } catch (_: Exception) {
+        } catch (e: OAuthRequestException) {
+            println("[AuthRepository] Erro na requisicao de refresh do Google: ${e.message}")
+            null
+        } catch (e: OAuthResponseException) {
+            println("[AuthRepository] Payload de tokens do Google corrompido: ${e.message}")
+            null
+        } catch (e: IOException) {
+            println("[AuthRepository] Falha fisica de rede ao tentar atualizar sessao: ${e.message}")
             null
         }
     }
