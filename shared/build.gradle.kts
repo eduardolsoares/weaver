@@ -52,6 +52,10 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+        jvmTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.testJunit)
+        }
         jsMain.dependencies {
             implementation(libs.wrappers.browser)
         }
