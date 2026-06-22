@@ -39,7 +39,11 @@ class GoogleAuthRepositoryImpl(
         code: String,
         codeVerifier: String
     ): AuthToken {
-        return client.exchangeAuthorizationCode(code, codeVerifier)
+        val token = client.exchangeAuthorizationCode(code, codeVerifier)
+
+        storage.save(token)
+
+        return token
     }
 
     override suspend fun refreshToken(refreshToken: String): AuthToken {

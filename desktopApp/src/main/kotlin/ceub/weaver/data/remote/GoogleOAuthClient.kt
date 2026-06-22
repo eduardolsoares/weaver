@@ -7,7 +7,7 @@ import java.io.BufferedReader
 import java.io.DataOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 
 class GoogleOAuthClient(
     private val clientId: String,
@@ -27,7 +27,7 @@ class GoogleOAuthClient(
                 append("&code=$code")
                 if (clientSecret != null) append("&client_secret=$clientSecret")
             }
-            val response = httpPost(tokenEndpoint, params)
+            val response = httpPost(params)
             parseTokenResponse(response)
         }
     }
@@ -35,7 +35,7 @@ class GoogleOAuthClient(
     suspend fun validateToken(accessToken: String): Boolean {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("$tokenInfoEndpoint?access_token=$accessToken")
+                val url = URI.create("$tokenInfoEndpoint?access_token=$accessToken").toURL()
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
@@ -55,13 +55,14 @@ class GoogleOAuthClient(
                 append("&refresh_token=$refreshToken")
                 if (clientSecret != null) append("&client_secret=$clientSecret")
             }
-            val response = httpPost(tokenEndpoint, params)
+            val response = httpPost(params)
             parseTokenResponse(response)
         }
     }
 
-    private fun httpPost(url: String, params: String): String {
-        val connection = URL(url).openConnection() as HttpURLConnection
+    private fun httpPost(params: String): String {
+        val url = URI.create(tokenEndpoint).toURL()
+        val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
         connection.doOutput = true
         connection.connectTimeout = 10000
@@ -70,35 +71,35 @@ class GoogleOAuthClient(
 
         DataOutputStream(connection.outputStream).use { it.writeBytes(params) }
 
-        val stream = if (connection.responseCode in 200..299) {
-            connection.inputStream
-        } else {
-            val errorReader = BufferedReader(
-                InputStreamReader(connection.errorStream)
-            )
-            val body = errorReader.readText()
+        val isSuccess = connection.responseCode in 200..299
+        val stream = if (isSuccess) connection.inputStream else connection.errorStream
+
+        val responseBody = BufferedReader(InputStreamReader(stream)).use { it.readText() }
+
+        if (!isSuccess) {
             throw OAuthRequestException(
-                "Token exchange failed: HTTP ${connection.responseCode} — $body",
-                body
+                "Token request failed: HTTP ${connection.responseCode} — $responseBody",
+                responseBody
             )
         }
 
-        return BufferedReader(InputStreamReader(stream)).readText()
+        return responseBody
     }
 
     private fun parseTokenResponse(json: String): AuthToken {
-        val idToken = extractJsonString(json, "id_token")
-
         val accessToken = extractJsonString(json, "access_token")
             ?: throw OAuthResponseException("Missing access_token in response: $json")
 
+        val idToken = extractJsonString(json, "id_token")
+
         val refreshToken = extractJsonString(json, "refresh_token")
-        val expiresIn = extractJsonString(json, "expires_in")?.toLongOrNull() ?: 3600
+        val expiresIn = extractExpiresIn(json) ?: 3600L
         val scope = extractJsonString(json, "scope") ?: ""
         val tokenType = extractJsonString(json, "token_type") ?: "Bearer"
 
         return AuthToken(
-            accessToken = idToken ?: accessToken,
+            accessToken = accessToken,
+            idToken = idToken,
             refreshToken = refreshToken,
             expiresIn = expiresIn,
             scope = scope,
@@ -111,7 +112,12 @@ class GoogleOAuthClient(
         val regex = "\"$key\"\\s*:\\s*\"([^\"]+)\"".toRegex()
         return regex.find(json)?.groupValues?.getOrNull(1)
     }
+
+    private fun extractExpiresIn(json: String): Long? {
+        val regex = "\"expires_in\"\\s*:\\s*([0-9]+)".toRegex()
+        return regex.find(json)?.groupValues?.getOrNull(1)?.toLongOrNull()
+    }
 }
 
-class OAuthRequestException(message: String, val responseBody: String) : Exception(message)
+class OAuthRequestException(message: String, responseBody: String) : Exception(message)
 class OAuthResponseException(message: String) : Exception(message)

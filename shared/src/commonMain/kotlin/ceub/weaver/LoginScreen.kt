@@ -17,7 +17,7 @@ import weaver.shared.generated.resources.*
 import ceub.weaver.ui.theme.*
 
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
+fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit, errorMessage: String?) {
     val lexendFont = WeaverFonts.getLexendFontFamily()
     Row(
         modifier = Modifier
@@ -46,6 +46,15 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit) {
             )
 
             Spacer(modifier = Modifier.weight(1f))
+
+            if (errorMessage != null) {
+                Text(
+                    text = errorMessage,
+                    color = Color(0xFFEF4444),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
 
         }
 

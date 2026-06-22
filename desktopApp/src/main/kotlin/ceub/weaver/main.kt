@@ -18,90 +18,119 @@ import ceub.weaver.data.remote.GoogleOAuthClient
 import ceub.weaver.data.remote.ProjectApiService
 import ceub.weaver.data.repository.GoogleAuthRepositoryImpl
 import ceub.weaver.domain.usecase.GoogleLoginUseCase
-import ceub.weaver.ui.mainScreen.MainScreen
+import ceub.weaver.domain.model.AuthToken
 import io.github.cdimascio.dotenv.dotenv
 
-fun main() = application {
-    var token by remember { mutableStateOf<String?>(null) }
-    val apiService = remember { ProjectApiService() }
-    val storage = remember { TokenStorage() }
-    val env = remember {
-        dotenv()
-    }
-    val clientSecret = env["GOOGLE_CLIENT_SECRET"]
-    if (token == null) {
-        val oauthClient = remember {
-            GoogleOAuthClient(
-                clientId = GOOGLE_CLIENT_ID,
-                redirectUri = GOOGLE_REDIRECT_URI,
-                clientSecret = clientSecret,
-            )
-        }
-        val repository = remember { GoogleAuthRepositoryImpl(storage, oauthClient) }
-        val loginUseCase = remember { GoogleLoginUseCase(repository) }
+import androidx.compose.ui.graphics.toComposeImageBitmap
 
-        Window(
-            onCloseRequest = ::exitApplication,
-            title = "weaver",
-            state = WindowState(size = DpSize(800.dp, 960.dp)),
+fun main() = application {
+    val storage = remember { TokenStorage() }
+    val apiService = remember { ProjectApiService() }
+    val env = remember { dotenv() }
+    val clientSecret = env["GOOGLE_CLIENT_SECRET"]
+    var authTokenState by remember { mutableStateOf(storage.load()) }
+    var avatarBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+
+    LaunchedEffect(authTokenState) {
+        val currentAuth = authTokenState
+        val idTokenLocal = currentAuth?.idToken
+
+        if (!idTokenLocal.isNullOrBlank()) {
+            try {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val photoUrl = apiService.getPhotoUrl(idTokenLocal)
+
+                    if (!photoUrl.isNullOrBlank()) {
+                        val uri = java.net.URI.create(photoUrl)
+                        val url = uri.toURL()
+
+                        val connection = url.openConnection() as java.net.HttpURLConnection
+                        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                        connection.connectTimeout = 5000
+                        connection.readTimeout = 5000
+
+                        val inputStream = connection.inputStream
+                        val bufferedImage = javax.imageio.ImageIO.read(inputStream)
+
+                        if (bufferedImage != null) {
+                            avatarBitmap = bufferedImage.toComposeImageBitmap()
+                        }
+                        inputStream.close()
+                    }
+                }
+            } catch (e: Exception) {
+                println("[DEBUG FOTO] ERRO CRÍTICO NO PROCESSO: ${e.message}")
+                e.printStackTrace()
+                avatarBitmap = null
+            }
+        } else {
+            avatarBitmap = null
+        }
+    }
+
+    val oauthClient = remember {
+        GoogleOAuthClient(
+            clientId = GOOGLE_CLIENT_ID,
+            redirectUri = GOOGLE_REDIRECT_URI,
+            clientSecret = clientSecret,
+        )
+    }
+    val repository = remember { GoogleAuthRepositoryImpl(storage, oauthClient) }
+    val loginUseCase = remember { GoogleLoginUseCase(repository) }
+
+    Window(
+        onCloseRequest = ::exitApplication,
+        title = "weaver - database modeler",
+        state = remember {
+            WindowState(
+                placement = WindowPlacement.Floating,
+                size = DpSize(1280.dp, 800.dp)
+            )
+        },
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF0A0C0F)),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(Color(0xFF0A0C0F)),
-                contentAlignment = Alignment.Center,
-            ) {
-                LoginScreen(
-                    onLoginSuccess = {
-                        token = "skipped"
-                    },
-                    onGoogleLoginClick = {
-                        GoogleAuth.iniciarLogin(
-                            useCase = loginUseCase,
-                            onSuccess = {
-                                val authToken = storage.load()
-                                token = authToken?.accessToken
-                            },
-                            onError = { println("Login error: ${it.message}") }
+            App(
+                token = authTokenState?.accessToken,
+                avatarBitmap = avatarBitmap,
+                onTokenChanged = { novoTokenString ->
+                    if (novoTokenString == null) {
+                        authTokenState = null
+                        storage.clear()
+                    } else {
+                        authTokenState = AuthToken(
+                            accessToken = novoTokenString,
+                            idToken = null,
+                            refreshToken = null,
+                            expiresIn = 3600,
+                            scope = "",
+                            tokenType = "",
+                            acquiredAt = System.currentTimeMillis()
                         )
                     }
-                )
-            }
-        }
-    }
-
-    if (token != null) {
-        val tokenReal = token!!
-        Window(
-            onCloseRequest = ::exitApplication,
-            title = "weaver - database modeler",
-            state = WindowState(
-                placement = WindowPlacement.Maximized,
-                size = DpSize(1400.dp, 960.dp),
-            ),
-        ) {
-            Box(Modifier.fillMaxSize().background(Color(0xFF0A0C0F))) {
-                var showEditor by remember { mutableStateOf(false) }
-                var selectedProject by remember { mutableStateOf("") }
-
-                if (!showEditor) {
-                    MainScreen(
-                        idToken = tokenReal,
-                        onNewProjectClick = {
-                            selectedProject = "New Project"
-                            showEditor = true
+                },
+                onGoogleLoginRequest = { onSuccess, onError ->
+                    GoogleAuth.iniciarLogin(
+                        useCase = loginUseCase,
+                        onSuccess = {
+                            val authToken = storage.load()
+                            authTokenState = authToken
+                            onSuccess()
                         },
-                        onProjectClick = { projectName ->
-                            selectedProject = projectName
-                            showEditor = true
-                        },
-                        onFetchProjects = { token -> apiService.fetchUserProjects(token) },
-                        onCreateProject = { name, token -> apiService.createProject(name, token) },
-                        onDeleteProject = { id, token -> apiService.deleteProject(id, token) },
-                        onRenameProject = { id, name, token -> apiService.renameProject(id, name, token) }
+                        onError = { error ->
+                            println("Login error: ${error.message}")
+                            onError(error)
+                        }
                     )
-                } else {
-                    HomeScreen()
-                }
-            }
+                },
+
+                onFetchProjects = { _ -> apiService.fetchUserProjects(authTokenState?.idToken ?: "") },
+                onCreateProject = { name, _ -> apiService.createProject(name, authTokenState?.idToken ?: "") },
+                onDeleteProject = { id, _ -> apiService.deleteProject(id, authTokenState?.idToken ?: "") },
+                onRenameProject = { id, name, _ -> apiService.renameProject(id, name, authTokenState?.idToken ?: "") }
+            )
         }
     }
 }
