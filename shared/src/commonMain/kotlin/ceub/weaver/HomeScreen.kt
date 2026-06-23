@@ -3,4 +3,6 @@ package ceub.weaver
 import androidx.compose.runtime.Composable
 
 @Composable
-expect fun HomeScreen()
+expect fun HomeScreen(
+    onBackToMain: () -> Unit = {},
+)

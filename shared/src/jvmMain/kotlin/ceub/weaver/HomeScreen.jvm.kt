@@ -133,7 +133,9 @@ val typeMapping = mapOf(
 )
 
 @Composable
-actual fun HomeScreen() {
+actual fun HomeScreen(
+    onBackToMain: () -> Unit,
+) {
     val tableDef = remember {
         NodeDefinition(
             name = "Table",
@@ -501,6 +503,26 @@ actual fun HomeScreen() {
                     )
                 }
             }
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(12.dp)
+                .size(36.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(style.colors.sidebar.copy(alpha = 0.9f))
+                .border(1.dp, style.colors.sidebarBorder, RoundedCornerShape(8.dp))
+                .clickable { onBackToMain() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                "\u2190",
+                style = TextStyle(
+                    fontSize = 18.sp,
+                    color = style.colors.portName,
+                ),
+            )
         }
     }
 }

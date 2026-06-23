@@ -132,7 +132,9 @@ fun App(
         }
 
         ScreenRoute.HOME -> {
-            HomeScreen()
+            HomeScreen(
+                onBackToMain = { currentScreen = ScreenRoute.MAIN }
+            )
         }
     }
 }
