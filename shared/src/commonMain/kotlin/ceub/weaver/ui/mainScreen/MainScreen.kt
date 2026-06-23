@@ -18,7 +18,10 @@ fun MainScreen(
     onNewProjectClick: () -> Unit,
     onProjectClick: (projectName: String) -> Unit,
     idToken: String,
-    onFetchProjects: suspend (String) -> List<ProjectResponse>,
+
+    avatarBitmap: androidx.compose.ui.graphics.ImageBitmap?,
+    onLogoutClick: () -> Unit,
+    onFetchProjects: suspend (String) -> Result<List<ProjectResponse>>,
     onCreateProject: suspend (String, String) -> ProjectResponse?,
     onDeleteProject: suspend (String, String) -> Boolean,
     onRenameProject: suspend (String, String, String) -> Boolean
@@ -38,7 +41,14 @@ fun MainScreen(
 
     LaunchedEffect(idToken) {
         isLoading = true
-        projects = onFetchProjects(idToken)
+        val result = onFetchProjects(idToken)
+
+        if (result.isSuccess) {
+            projects = result.getOrNull() ?: emptyList()
+        } else {
+            projects = emptyList()
+            println("Erro ao buscar projetos: ${result.exceptionOrNull()?.message}")
+        }
         isLoading = false
     }
 
@@ -51,7 +61,8 @@ fun MainScreen(
                 projectToConfirmDelete?.id?.let { projectId ->
                     scope.launch {
                         if (onDeleteProject(projectId, idToken)) {
-                            projects = onFetchProjects(idToken)
+                            val result = onFetchProjects(idToken)
+                            projects = result.getOrNull() ?: emptyList()
                         }
                     }
                 }
@@ -117,7 +128,8 @@ fun MainScreen(
                                 projectToRename?.id?.let { projectId ->
                                     scope.launch {
                                         if (onRenameProject(projectId, newNameInput, idToken)) {
-                                            projects = onFetchProjects(idToken)
+                                            val result = onFetchProjects(idToken)
+                                            projects = result.getOrNull() ?: emptyList()
                                         }
                                     }
                                 }
@@ -142,7 +154,12 @@ fun MainScreen(
     }
 
     Scaffold(
-        topBar = { SearchBar() },
+        topBar = {
+            SearchBar(
+                avatarBitmap = avatarBitmap,
+                onLogoutClick = onLogoutClick
+            )
+        },
         containerColor = Color(0xFF0A0C0F)
     ) { padding ->
         LazyColumn(
@@ -157,7 +174,8 @@ fun MainScreen(
                     scope.launch {
                         val newProject = onCreateProject("Projeto sem nome", idToken)
                         if (newProject != null) {
-                            projects = onFetchProjects(idToken)
+                            val result = onFetchProjects(idToken)
+                            projects = result.getOrNull() ?: emptyList()
                             onNewProjectClick()
                         }
                     }

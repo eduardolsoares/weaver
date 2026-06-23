@@ -21,6 +21,7 @@ class TokenStorage(
 
         val props = Properties()
         props.setProperty("accessToken", token.accessToken)
+        props.setProperty("idToken", token.idToken ?: "")
         props.setProperty("refreshToken", token.refreshToken ?: "")
         props.setProperty("expiresIn", token.expiresIn.toString())
         props.setProperty("scope", token.scope)
@@ -43,6 +44,7 @@ class TokenStorage(
         FileReader(tokenFile).use { props.load(it) }
 
         val accessToken = props.getProperty("accessToken") ?: return null
+        val idToken = props.getProperty("idToken")
         val refreshToken = props.getProperty("refreshToken")
         val expiresIn = props.getProperty("expiresIn")?.toLongOrNull() ?: return null
         val scope = props.getProperty("scope") ?: return null
@@ -51,6 +53,7 @@ class TokenStorage(
 
         return AuthToken(
             accessToken = accessToken,
+            idToken = idToken?.ifEmpty { null },
             refreshToken = refreshToken?.ifEmpty { null },
             expiresIn = expiresIn,
             scope = scope,
