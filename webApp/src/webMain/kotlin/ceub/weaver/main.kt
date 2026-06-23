@@ -7,7 +7,9 @@ import androidx.compose.ui.window.ComposeViewport
 fun main() {
     ComposeViewport {
         App(
-            onGoogleLoginRequest = { onSuccess, _ -> onSuccess() }
+            onGoogleLoginRequest = { onSuccess, _ -> onSuccess() },
+            onSaveGraph = { _, _ -> true },
+            onLoadGraph = { null }
         )
     }
 }

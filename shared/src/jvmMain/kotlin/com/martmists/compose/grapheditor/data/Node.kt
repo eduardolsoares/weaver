@@ -13,11 +13,13 @@ import com.martmists.compose.grapheditor.compose.internal.PORT_OFFSET
 import com.martmists.compose.grapheditor.compose.internal.PORT_PADDING
 import com.martmists.compose.grapheditor.compose.internal.PORT_SIZE
 import com.martmists.compose.grapheditor.data.property.PropertyDefinition
+import java.util.UUID
 
 class Node<T>(
     val graph: Graph<T>,
     val definition: NodeDefinition,
     position: Offset = Offset.Zero,
+    val id: String = UUID.randomUUID().toString(),
 ) {
     var position by mutableStateOf(position)
     var name by mutableStateOf(definition.name)

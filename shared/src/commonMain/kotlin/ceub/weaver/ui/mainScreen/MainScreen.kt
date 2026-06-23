@@ -15,8 +15,8 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(
-    onNewProjectClick: () -> Unit,
-    onProjectClick: (projectName: String) -> Unit,
+    onNewProjectClick: (projectId: String) -> Unit,
+    onProjectClick: (project: ProjectResponse) -> Unit,
     idToken: String,
 
     avatarBitmap: androidx.compose.ui.graphics.ImageBitmap?,
@@ -176,7 +176,7 @@ fun MainScreen(
                         if (newProject != null) {
                             val result = onFetchProjects(idToken)
                             projects = result.getOrNull() ?: emptyList()
-                            onNewProjectClick()
+                            onNewProjectClick(newProject.id)
                         }
                     }
                 })
@@ -214,7 +214,7 @@ fun MainScreen(
                             else -> {
                                 RealProjectsGrid(
                                     projectsList = projects,
-                                    onProjectClick = { project -> onProjectClick(project.name) },
+                                    onProjectClick = { project -> onProjectClick(project) },
                                     onDeleteProjectClick = { selectedProject ->
                                         projectToConfirmDelete = selectedProject
                                         showDeleteDialog = true
