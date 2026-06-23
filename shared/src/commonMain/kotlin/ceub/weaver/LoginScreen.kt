@@ -81,47 +81,6 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onGoogleLoginClick: () -> Unit, erro
                 icon = painterResource(Res.drawable.icn_github),
                 onGoogleLoginClick
             )
-
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 40.dp),
-                color = WeaverColors.InputBorder
-            )
-
-            Text("Email", color = WeaverColors.TextGray, fontSize = 14.sp, fontFamily = lexendFont)
-            var email by remember { mutableStateOf("") }
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                placeholder = { Text("Enter your email address", color = Color.Gray, fontFamily = lexendFont) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedBorderColor = Color.White,
-                    unfocusedBorderColor = WeaverColors.InputBorder,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-
-            Text(
-                "Use an organization email to easily collaborate with teammates.",
-                color = Color.Gray,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(top = 10.dp, bottom = 40.dp),
-                fontFamily = lexendFont
-            )
-
-            Button(
-                onClick = { onLoginSuccess() },
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = WeaverColors.ButtonBlue),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("Continue", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = lexendFont)
-            }
         }
     }
 }
