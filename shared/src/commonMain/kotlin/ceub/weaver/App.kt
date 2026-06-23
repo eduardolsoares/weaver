@@ -1,49 +1,138 @@
 package ceub.weaver
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import org.jetbrains.compose.resources.painterResource
+import ceub.weaver.ui.mainScreen.MainScreen
+import ceub.weaver.domain.model.ProjectResponse
 
-import weaver.shared.generated.resources.Res
-import weaver.shared.generated.resources.compose_multiplatform
+enum class ScreenRoute {
+    LOADING,
+    LOGIN,
+    MAIN,
+    HOME
+}
 
 @Composable
-@Preview
-fun App() {
-    MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
-        Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+fun App(
+    token: String?,
+    avatarBitmap: androidx.compose.ui.graphics.ImageBitmap?,
+    onTokenChanged: (String?) -> Unit,
+    onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit,
+    onFetchProjects: suspend (String) -> Result<List<ProjectResponse>>,
+    onCreateProject: suspend (String, String) -> ProjectResponse?,
+    onDeleteProject: suspend (String, String) -> Boolean,
+    onRenameProject: suspend (String, String, String) -> Boolean,
+) {
+    var currentScreen by remember(token) {
+        mutableStateOf(
+            when {
+                token == "skipped" -> ScreenRoute.MAIN
+                !token.isNullOrBlank() -> ScreenRoute.LOADING
+                else -> ScreenRoute.LOGIN
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
+        )
+    }
+
+    var selectedProject by remember { mutableStateOf("") }
+    var authErrorMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(token) {
+        if (token.isNullOrBlank()) {
+            currentScreen = ScreenRoute.LOGIN
+            return@LaunchedEffect
+        }
+
+        if (token == "skipped") {
+            currentScreen = ScreenRoute.MAIN
+            return@LaunchedEffect
+        }
+
+        println("Verificando token no servidor...")
+        currentScreen = ScreenRoute.LOADING
+
+        val result = onFetchProjects(token)
+
+        if (result.isSuccess) {
+            println("Token aprovado! Indo para MAIN.")
+            authErrorMessage = null
+            currentScreen = ScreenRoute.MAIN
+        } else {
+            val exception = result.exceptionOrNull()
+            val errorMessage = exception?.message ?: ""
+            println("Erro capturado na UI através do Result: $errorMessage")
+
+            if (errorMessage == "AUTH_TOKEN_EXPIRED") {
+                println("Token expirado. Limpando cache e indo para LOGIN.")
+                authErrorMessage = "Sua sessão expirou. Faça login novamente."
+                onTokenChanged(null)
+            } else {
+                println("Erro de rede ou servidor offline.")
+                authErrorMessage = "Não foi possível conectar ao servidor. Verifique se o backend está rodando."
+            }
+
+            currentScreen = ScreenRoute.LOGIN
+        }
+    }
+
+    when (currentScreen) {
+        ScreenRoute.LOADING -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        ScreenRoute.LOGIN -> {
+            LoginScreen(
+                errorMessage = authErrorMessage,
+                onLoginSuccess = {
+                    authErrorMessage = null
+                    onTokenChanged("skipped")
+                    currentScreen = ScreenRoute.MAIN
+                },
+                onGoogleLoginClick = {
+                    onGoogleLoginRequest(
+                        { println("Sucesso no fluxo Google. Aguardando validacao do token...") },
+                        { error -> authErrorMessage = "Falha no login com o Google: ${error.message}" }
+                    )
                 }
-            }
+            )
+        }
+
+        ScreenRoute.MAIN -> {
+            MainScreen(
+                idToken = token ?: "",
+                avatarBitmap = avatarBitmap,
+
+                onLogoutClick = {
+                    println("Resetando token para null e limpando storage...")
+                    onTokenChanged(null)
+                    currentScreen = ScreenRoute.LOGIN
+                },
+
+                onNewProjectClick = {
+                    selectedProject = "New Project"
+                    currentScreen = ScreenRoute.HOME
+                },
+                onProjectClick = { projectName ->
+                    selectedProject = projectName
+                    currentScreen = ScreenRoute.HOME
+                },
+                onFetchProjects = onFetchProjects,
+                onCreateProject = onCreateProject,
+                onDeleteProject = onDeleteProject,
+                onRenameProject = onRenameProject
+            )
+        }
+
+        ScreenRoute.HOME -> {
+            HomeScreen()
         }
     }
 }
