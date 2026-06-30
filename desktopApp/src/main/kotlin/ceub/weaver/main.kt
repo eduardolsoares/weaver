@@ -133,7 +133,13 @@ fun main() = application {
                 onFetchProjects = { _ -> apiService.fetchUserProjects(authTokenState?.idToken ?: "") },
                 onCreateProject = { name, _ -> apiService.createProject(name, authTokenState?.idToken ?: "") },
                 onDeleteProject = { id, _ -> apiService.deleteProject(id, authTokenState?.idToken ?: "") },
-                onRenameProject = { id, name, _ -> apiService.renameProject(id, name, authTokenState?.idToken ?: "") }
+                onRenameProject = { id, name, _ -> apiService.renameProject(id, name, authTokenState?.idToken ?: "") },
+                onSaveGraph = { projectId, snapshot ->
+                    apiService.saveGraph(projectId, snapshot, authTokenState?.idToken ?: "")
+                },
+                onLoadGraph = { projectId ->
+                    apiService.loadGraph(projectId, authTokenState?.idToken ?: "")
+                }
             )
         }
     }

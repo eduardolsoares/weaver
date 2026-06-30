@@ -1,5 +1,6 @@
 package ceub.weaver.data.remote
 
+import ceub.weaver.domain.model.GraphSnapshot
 import ceub.weaver.domain.model.ProjectResponse
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -132,6 +133,48 @@ class ProjectApiService {
         } catch (e: IOException) {
             println("Erro de rede ao renomear projeto: ${e.message}")
             false
+        }
+    }
+
+    suspend fun saveGraph(projectId: String, snapshot: GraphSnapshot, idToken: String): Boolean {
+        return try {
+            val response = client.put("$baseUrl/$projectId/diagram") {
+                contentType(ContentType.Application.Json)
+                setBody(snapshot)
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $idToken")
+                }
+            }
+            if (response.status.value == 401) throw IllegalArgumentException("AUTH_TOKEN_EXPIRED")
+            response.status.isSuccess()
+        } catch (e: ResponseException) {
+            println("Erro ao salvar diagrama: Status ${e.response.status.value}")
+            false
+        } catch (e: IOException) {
+            println("Erro de rede ao salvar diagrama: ${e.message}")
+            false
+        }
+    }
+
+    suspend fun loadGraph(projectId: String, idToken: String): GraphSnapshot? {
+        return try {
+            val response = client.get("$baseUrl/$projectId/diagram") {
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer $idToken")
+                }
+            }
+            when (response.status.value) {
+                401 -> throw IllegalArgumentException("AUTH_TOKEN_EXPIRED")
+                404 -> null
+                in 200..299 -> response.body()
+                else -> null
+            }
+        } catch (e: ResponseException) {
+            println("Erro ao carregar diagrama: Status ${e.response.status.value}")
+            null
+        } catch (e: IOException) {
+            println("Erro de rede ao carregar diagrama: ${e.message}")
+            null
         }
     }
 }

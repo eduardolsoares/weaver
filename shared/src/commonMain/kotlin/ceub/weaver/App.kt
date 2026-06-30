@@ -6,6 +6,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import ceub.weaver.domain.model.GraphSnapshot
 import ceub.weaver.ui.mainScreen.MainScreen
 import ceub.weaver.domain.model.ProjectResponse
 
@@ -18,14 +19,16 @@ enum class ScreenRoute {
 
 @Composable
 fun App(
-    token: String?,
-    avatarBitmap: androidx.compose.ui.graphics.ImageBitmap?,
-    onTokenChanged: (String?) -> Unit,
-    onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit,
-    onFetchProjects: suspend (String) -> Result<List<ProjectResponse>>,
-    onCreateProject: suspend (String, String) -> ProjectResponse?,
-    onDeleteProject: suspend (String, String) -> Boolean,
-    onRenameProject: suspend (String, String, String) -> Boolean,
+    token: String? = null,
+    avatarBitmap: androidx.compose.ui.graphics.ImageBitmap? = null,
+    onTokenChanged: (String?) -> Unit = {},
+    onGoogleLoginRequest: (onSuccess: () -> Unit, onError: (Throwable) -> Unit) -> Unit = { _, _ -> },
+    onFetchProjects: suspend (String) -> Result<List<ProjectResponse>> = { Result.failure(Exception("not implemented")) },
+    onCreateProject: suspend (String, String) -> ProjectResponse? = { _, _ -> null },
+    onDeleteProject: suspend (String, String) -> Boolean = { _, _ -> false },
+    onRenameProject: suspend (String, String, String) -> Boolean = { _, _, _ -> false },
+    onSaveGraph: suspend (String, GraphSnapshot) -> Boolean = { _, _ -> true },
+    onLoadGraph: suspend (String) -> GraphSnapshot? = { null },
 ) {
     var currentScreen by remember(token) {
         mutableStateOf(
@@ -37,7 +40,7 @@ fun App(
         )
     }
 
-    var selectedProject by remember { mutableStateOf("") }
+    var selectedProjectId by remember { mutableStateOf("") }
     var authErrorMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(token) {
@@ -116,12 +119,12 @@ fun App(
                     currentScreen = ScreenRoute.LOGIN
                 },
 
-                onNewProjectClick = {
-                    selectedProject = "New Project"
+                onNewProjectClick = { projectId ->
+                    selectedProjectId = projectId
                     currentScreen = ScreenRoute.HOME
                 },
-                onProjectClick = { projectName ->
-                    selectedProject = projectName
+                onProjectClick = { project ->
+                    selectedProjectId = project.id
                     currentScreen = ScreenRoute.HOME
                 },
                 onFetchProjects = onFetchProjects,
@@ -133,7 +136,10 @@ fun App(
 
         ScreenRoute.HOME -> {
             HomeScreen(
-                onBackToMain = { currentScreen = ScreenRoute.MAIN }
+                onBackToMain = { currentScreen = ScreenRoute.MAIN },
+                projectId = selectedProjectId,
+                onSaveGraph = onSaveGraph,
+                onLoadGraph = onLoadGraph,
             )
         }
     }

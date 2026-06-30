@@ -13,25 +13,9 @@ fun main() {
         var token by remember { mutableStateOf(localStorage.getItem("token")) }
 
         App(
-            token = token,
-            avatarBitmap = null,
-            onTokenChanged = { newToken ->
-                token = newToken
-                if (newToken != null) {
-                    localStorage.setItem("token", newToken)
-                } else {
-                    localStorage.removeItem("token")
-                }
-            },
-            onGoogleLoginRequest = { onSuccess, _ ->
-                localStorage.setItem("token", "skipped")
-                token = "skipped"
-                onSuccess()
-            },
-            onFetchProjects = { idToken -> api.fetchUserProjects(idToken) },
-            onCreateProject = { name, idToken -> api.createProject(name, idToken) },
-            onDeleteProject = { id, idToken -> api.deleteProject(id, idToken) },
-            onRenameProject = { id, name, idToken -> api.renameProject(id, name, idToken) }
+            onGoogleLoginRequest = { onSuccess, _ -> onSuccess() },
+            onSaveGraph = { _, _ -> true },
+            onLoadGraph = { null }
         )
     }
 }

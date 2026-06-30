@@ -57,6 +57,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ceub.weaver.domain.model.GraphSnapshot
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import java.awt.AWTEvent
 import java.awt.KeyboardFocusManager
 import java.awt.Toolkit
@@ -78,9 +82,6 @@ import com.martmists.compose.grapheditor.data.NodeDefinition
 import com.martmists.compose.grapheditor.data.PortDefinition
 import com.martmists.compose.grapheditor.data.PortKind
 import com.martmists.compose.grapheditor.data.property.StringProperty
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 data class ColumnDef(
     val name: String,
@@ -135,6 +136,9 @@ val typeMapping = mapOf(
 @Composable
 actual fun HomeScreen(
     onBackToMain: () -> Unit,
+    projectId: String,
+    onSaveGraph: suspend (String, GraphSnapshot) -> Boolean,
+    onLoadGraph: suspend (String) -> GraphSnapshot?,
 ) {
     val tableDef = remember {
         NodeDefinition(
@@ -173,14 +177,27 @@ actual fun HomeScreen(
 
     val definitions = remember { listOf(tableDef, enumDef, noteDef) }
     val graph = remember { Graph<Unit>(definitions) }
+    var selectedDatabase by remember { mutableStateOf(databaseNames.first()) }
+    val nodeColumns = remember { mutableStateMapOf<Any, MutableList<ColumnDef>>() }
+    var previousDatabase by remember { mutableStateOf(selectedDatabase) }
+    var isLoadingGraph by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
-        val table1 = graph.addNode(tableDef, Offset(100f, 100f))
-        val table2 = graph.addNode(tableDef, Offset(500f, 200f))
-        graph.tryConnect(
-            table1, table1.definition.outputPorts.first(),
-            table2, table2.definition.inputPorts.first()
-        )
+    LaunchedEffect(projectId) {
+        isLoadingGraph = true
+        val snapshot = onLoadGraph(projectId)
+        if (snapshot != null && snapshot.nodes.isNotEmpty()) {
+            GraphSerializer.run { snapshot.restore(graph, definitions, nodeColumns) }
+            selectedDatabase = snapshot.selectedDatabase
+            previousDatabase = snapshot.selectedDatabase
+        } else {
+            val table1 = graph.addNode(tableDef, Offset(100f, 100f))
+            val table2 = graph.addNode(tableDef, Offset(500f, 200f))
+            graph.tryConnect(
+                table1, table1.definition.outputPorts.first(),
+                table2, table2.definition.inputPorts.first()
+            )
+        }
+        isLoadingGraph = false
     }
 
     val state = remember { GraphState(graph) }
@@ -189,13 +206,12 @@ actual fun HomeScreen(
     var isCtrlPressed by remember { mutableStateOf(false) }
     var isRightClicking by remember { mutableStateOf(false) }
     var showDdl by remember { mutableStateOf(false) }
+    var showSavedToast by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val style = remember(isDarkTheme) { databaseTableStyle(isDarkTheme) }
 
     val tableNodes = graph.nodes.filter { it.definition.name == "Table" }
-    var selectedDatabase by remember { mutableStateOf(databaseNames.first()) }
-    val nodeColumns = remember { mutableStateMapOf<Any, MutableList<ColumnDef>>() }
 
-    var previousDatabase by remember { mutableStateOf(selectedDatabase) }
     LaunchedEffect(selectedDatabase) {
         if (selectedDatabase == previousDatabase) return@LaunchedEffect
         if (nodeColumns.isEmpty()) return@LaunchedEffect
@@ -214,12 +230,32 @@ actual fun HomeScreen(
         previousDatabase = selectedDatabase
     }
 
+    fun saveGraph() {
+        if (isLoadingGraph) return
+        scope.launch {
+            val snapshot = GraphSerializer.run {
+                graph.toSnapshot(nodeColumns, selectedDatabase)
+            }
+            val ok = onSaveGraph(projectId, snapshot)
+            if (ok) {
+                showSavedToast = true
+                delay(2000)
+                showSavedToast = false
+            }
+        }
+    }
+
     DisposableEffect(Unit) {
         val dispatcher = KeyEventDispatcher { event ->
             if (event.keyCode == AWTKeyEvent.VK_CONTROL) {
                 isCtrlPressed = event.id == AWTKeyEvent.KEY_PRESSED
             }
-            false
+            if (event.id == AWTKeyEvent.KEY_PRESSED && event.isControlDown && event.keyCode == AWTKeyEvent.VK_S) {
+                saveGraph()
+                true
+            } else {
+                false
+            }
         }
         KeyboardFocusManager.getCurrentKeyboardFocusManager()
             .addKeyEventDispatcher(dispatcher)
@@ -295,6 +331,8 @@ actual fun HomeScreen(
                 .background(style.colors.sidebar.copy(alpha = 0.95f))
                 .border(1.dp, style.colors.sidebarBorder, RoundedCornerShape(10.dp))
                 .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             ToolbarButton(
                 icon = "\u270B",
@@ -366,7 +404,6 @@ actual fun HomeScreen(
                         .background(style.colors.nodeDefault)
                         .border(1.dp, style.colors.nodeBorder, RoundedCornerShape(8.dp)),
                 ) {
-                    val scope = rememberCoroutineScope()
                     var showCopiedToast by remember { mutableStateOf(false) }
                     Box(Modifier.fillMaxSize().padding(12.dp)) {
                         Box(
@@ -502,6 +539,26 @@ actual fun HomeScreen(
                         },
                     )
                 }
+            }
+        }
+
+        if (showSavedToast) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 40.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(style.colors.selectionHighlight.copy(alpha = 0.9f))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    "Saved!",
+                    style = TextStyle(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = style.colors.nodeDefault,
+                    ),
+                )
             }
         }
 

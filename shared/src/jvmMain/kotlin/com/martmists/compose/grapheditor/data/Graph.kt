@@ -34,6 +34,12 @@ class Graph<T>(
         return node
     }
 
+    fun addNode(definition: NodeDefinition, position: Offset, id: String, isUndo: Boolean = false): Node<T> {
+        val node = Node<T>(this, definition, position, id)
+        addNodeInternal(node, isUndo)
+        return node
+    }
+
     internal fun addNodeInternal(node: Node<T>, isUndo: Boolean = false) {
         nodes.add(node)
         GlobalScope.launch(dispatcher) {
